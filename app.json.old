@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.emre.CivicSnap" 
+      "bundleIdentifier": "dev.emre.CivicSnap",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "CivicSnap gebruikt je locatie om te laten zien waar je bent op de kaart."
+      }
     },
     "android": {
       "adaptiveIcon": {
