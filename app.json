@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.emre.CivicSnap" 
     },
     "android": {
       "adaptiveIcon": {
@@ -18,6 +19,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "package": "dev.emre.CivicSnap",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
