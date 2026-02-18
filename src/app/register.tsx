@@ -251,16 +251,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 25,
-    fontWeight: 'bold',
+    fontFamily: Variables.fonts.bold || "bold",
     alignSelf: 'center',
-    color: '#000',
+    color: Variables.colors.text || '#000',
   },
  backButtonWrapper: {
     position: 'absolute', 
     left: 0,              
     zIndex: 10,           
     marginTop: 28,
-    
     transform: [{ scale: 1.5 }], 
     padding: 5, 
   },
@@ -288,7 +287,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: Variables.colors.primary || '#007AFF',
+    backgroundColor: Variables.colors.primary || '#0870C4',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -299,9 +298,9 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     marginTop: 12,
-    fontSize: 18,
-    color: '#333',
-    fontWeight: '500',
+    fontSize: Variables.textSizes.md || 18,
+    color: Variables.colors.textLight || "#747373",
+    fontFamily: Variables.fonts.default || "Medium",
   },
 
 
@@ -328,31 +327,29 @@ const styles = StyleSheet.create({
   },
   inputText: {
     flex: 1, 
-    fontSize: 16,
-    color: '#000',
+    fontSize: Variables.textSizes.base || 16,
+    color: Variables.colors.text || '#000',
     height: '100%',
   },
   
   errorText: {
-    color: "red",
+    color: Variables.colors.error || "#D3465C",
     textAlign: "center",
     marginBottom: 10,
   },
-
- 
   footer: {
       marginTop: 10,
       alignItems: 'center',
   },
   footerText: {
       textAlign: 'center',
-      color: '#333',
-      fontSize: 15,
+    color: Variables.colors.textLight || "#747373",
+    fontSize: Variables.textSizes.sm || 14,
       lineHeight: 20,
   },
   linkText: {
-      color: Variables.colors.primary || '#007AFF',
-      fontWeight: '600',
+     color: Variables.colors.primary || "#0870C4",
+    fontFamily: Variables.fonts.semibold || "semibold",
       textDecorationLine: 'underline',
   }
 });

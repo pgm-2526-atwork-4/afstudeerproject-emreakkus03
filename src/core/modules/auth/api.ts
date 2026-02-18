@@ -129,7 +129,11 @@ export const logout = async () => {
   try {
     await API.auth.deleteSession('current');
     return Promise.resolve();
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes('missing scopes') || error?.message?.includes('guests')) {
+      console.log('Session already invalidated, proceeding with logout.');
+      return Promise.resolve();
+    }
     return Promise.reject(error);
   }
 };

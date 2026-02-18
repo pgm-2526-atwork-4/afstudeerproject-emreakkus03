@@ -19,41 +19,48 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useAuthContext();
 
-  const displayName = profile?.full_name || "Gebruiker";
+  const displayName = profile?.full_name?.split(" ")[0] || "Gebruiker";
   const points = profile?.current_points || 0;
+  const currentLevel = profile?.lifetime_points || 1;
   const avatarUrl = profile?.avatar_url;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.userContainer}>
-            <Image
-              source={
-                avatarUrl
-                  ? { uri: avatarUrl }
-                  : require("@assets/icons/User.png")
-              }
-              style={styles.avatar}
-            />
+        <View style={styles.headerRow}>
+            {/* Linker gedeelte: Avatar + Naam/Level */}
+            <View style={styles.profileGroup}>
+              <Image
+                source={
+                  avatarUrl
+                    ? { uri: avatarUrl }
+                    : require("@assets/icons/User.png")
+                }
+                style={styles.avatar}
+              />
+              <View>
+                <ThemedText style={styles.greeting}>
+                  Hoi, {displayName}
+                </ThemedText>
+                {/* Ik heb hier een aparte style voor gemaakt zodat Level iets kleiner/grijzer is */}
+                <Text style={styles.levelText}>Level {currentLevel}</Text> 
+              </View>
+            </View>
 
-            <View>
-              <ThemedText style={styles.greeting}>
-                Hoi, {displayName}
-              </ThemedText>
+            {/* Rechter gedeelte: Punten + Diamant */}
+            <View style={styles.pointsGroup}>
+              <Text style={styles.pointsValue}>{points}</Text>
+              <Image
+                source={require("@assets/icons/Diamant.png")}
+                style={{ width: 28, height: 28 }}
+                resizeMode="contain"
+              />
             </View>
           </View>
 
-          <View style={styles.pointsBadge}>
-            <Ionicons name="trophy" size={16} color="#FFD700" />
-            <Text style={styles.pointsText}>{points} pts</Text>
-          </View>
-        </View>
-
         <View style={styles.section}>
-                   
-                    <LocationMap />
-                </View>
+          <LocationMap />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -65,6 +72,7 @@ const styles = StyleSheet.create({
     backgroundColor: Variables.colors.background,
   },
   scrollContent: {
+    flexGrow: 1,
     padding: Variables.sizes.lg || 20,
     paddingBottom: 0,
     paddingHorizontal: Variables.sizes.lg || 20,
@@ -76,44 +84,47 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     marginTop: 10,
   },
-  userContainer: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    flex: 1,
+    justifyContent: "space-between", 
+    width: "100%",
+    marginBottom: 30, 
   },
-
+  profileGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12, 
+  },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#E0E0E0",
-    borderWidth: 1,
-    borderColor: "#FFF",
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000",
+    fontFamily: Variables.fonts.bold || "bold",
+    fontSize: Variables.textSizes.lg || 22,
+    color: Variables.colors.text || "#000",
   },
-  pointsBadge: {
+  levelText: {
+    fontSize: Variables.textSizes.md || 16,
+    color: Variables.colors.textLight || "#747373", 
+    marginTop: 2,
+  },
+  pointsGroup: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    gap: 6,
+    gap: 6, 
   },
-  pointsText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
+  pointsValue: {
+    fontSize: Variables.textSizes.lg || 22, 
+    fontFamily: Variables.fonts.bold || "bold",
+    color: Variables.colors.text || "#000",
   },
   section: {
-        marginTop: 0,
-        marginHorizontal: -(Variables.sizes.lg || 20),
-    }
+    flex: 1,
+    marginTop: 0,
+    marginHorizontal: -(Variables.sizes.lg || 20),
+  },
 });

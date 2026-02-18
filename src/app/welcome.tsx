@@ -67,26 +67,22 @@ const styles = StyleSheet.create({
     paddingTop: 80, 
     paddingBottom: 50, 
   },
-  
-  
   header: {
     alignItems: 'center',
   },
   title: {
     fontSize: 45, 
-    color: Variables.colors.header, // #274373 
+    color: Variables.colors.header || "#274373",  
     letterSpacing: 1, 
     marginBottom: Variables.sizes.sm,
     textTransform: 'uppercase', 
   },
   subtitle: {
     textAlign: 'center',
-    color: Variables.colors.text, // #000000
+    color: Variables.colors.text || "#000000",
     paddingHorizontal: 20,
     lineHeight: 24, 
   },
-
-  
   imageContainer: {
     flex: 1, 
     justifyContent: 'center',
@@ -96,7 +92,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300, 
   },
-
   footer: {
     width: '100%',
   }

@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
     left: 0,              
     zIndex: 10,           
     marginTop: 28,
-    
     transform: [{ scale: 1.5 }], 
     padding: 5, 
   },
@@ -172,13 +171,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
+    fontFamily: Variables.fonts.bold || "bold",
+    color: Variables.colors.text || "#000",
     marginBottom: 4,
   },
   subTitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: Variables.textSizes.base || 16,
+    color: Variables.colors.textLight ||  "#747373",
   },
   
 
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: "#FFF",
+    backgroundColor: Variables.colors.background || "#F5F7FA",
     borderWidth: 1,
     borderColor: "#E5E5E5",
     borderRadius: 12,
@@ -201,13 +200,13 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     resizeMode: 'contain',
-    tintColor: '#000',
+    tintColor: Variables.colors.text || "#000",
     marginRight: 12,
   },
   inputText: {
     flex: 1,
-    fontSize: 16,
-    color: '#000',
+    fontSize: Variables.textSizes.base || 16,
+    color: Variables.colors.text || "#000",
     height: '100%',
   },
 
@@ -221,8 +220,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   linkText: {
-    color: Variables.colors.primary , 
-    fontWeight: '600',
+    color: Variables.colors.primary || "#0870C4", 
+    fontFamily: Variables.fonts.default || "medium",
     textDecorationLine: 'underline',
   },
 
@@ -233,13 +232,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     textAlign: 'center',
-    color: '#333',
-    fontSize: 13,
+    color: Variables.colors.textLight || "#747373",
+    fontSize: Variables.textSizes.sm || 14,
     lineHeight: 20,
   },
   legalLink: {
-    color: Variables.colors.primary,
-    fontWeight: '600',
+    color: Variables.colors.primary || "#0870C4",
+    fontFamily: Variables.fonts.semibold || "semibold",
     textDecorationLine: 'underline',
   }
 });
