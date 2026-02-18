@@ -18,6 +18,10 @@ import * as Location from "expo-location";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+//--- Components ---
+import ReportPopupScreen from "@components/functional/Report/ReportPopupScreen";
+
+// --- Theme styling ---
 import { Variables } from "@/style/theme";
 
 export default function LocationMap() {
@@ -26,10 +30,12 @@ export default function LocationMap() {
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reportPopupVisible, setReportPopupVisible] = useState(false);
 
   const mapRef = React.useRef<MapView>(null);
 
   const insets = useSafeAreaInsets();
+
 
   const DEFAULT_REGION = {
     latitude: 51.0956,
@@ -130,7 +136,7 @@ export default function LocationMap() {
       </MapView>
       <TouchableOpacity 
         style={[styles.plus, { bottom: insets.bottom +  0 }]} 
-        onPress={() => console.log("Melding maken start...")}
+        onPress={() => setReportPopupVisible(true)}
         activeOpacity={0.8}
       >
         <Image 
@@ -138,6 +144,14 @@ export default function LocationMap() {
           style={styles.plusImage} 
         />
       </TouchableOpacity>
+
+      <ReportPopupScreen
+        visible={reportPopupVisible}
+        onClose={() => setReportPopupVisible(false)}
+        onCameraPress={() => console.log("Camera pressed")}
+        onGalleryPress={() => console.log("Gallery pressed")}
+        onNotePress={() => console.log("Note pressed")}
+      />
       {loading && !location && (
         <View style={styles.overlayCenter}>
           <ActivityIndicator size="large" color={Variables.colors.primary} />

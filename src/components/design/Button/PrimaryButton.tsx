@@ -10,6 +10,42 @@ type Props = {
   variant?: "primary" | "secondary";
 };
 
+
+export default function Button({ 
+  onPress, 
+  children, 
+  style, 
+  disabled = false, 
+  variant = "primary"
+}: Props) {
+  
+  
+  const isPrimary = variant === "primary";
+
+  return (
+    <Pressable
+      disabled={disabled}
+      accessibilityLabel={children}
+      onPress={onPress}
+      
+      style={[
+        styles.base, 
+        isPrimary ? styles.primary : styles.secondary, 
+        style
+      ]}
+    >
+      <View>
+        <ThemedText 
+          type="button" 
+          color={isPrimary ? "inverse" : "blue"}
+        >
+          {children}
+        </ThemedText>
+      </View>
+    </Pressable>
+  );
+};
+
 const styles = StyleSheet.create({
   
   base: {
@@ -46,39 +82,3 @@ const styles = StyleSheet.create({
   }
 });
 
-const Button = ({ 
-  onPress, 
-  children, 
-  style, 
-  disabled = false, 
-  variant = "primary"
-}: Props) => {
-  
-  
-  const isPrimary = variant === "primary";
-
-  return (
-    <Pressable
-      disabled={disabled}
-      accessibilityLabel={children}
-      onPress={onPress}
-      
-      style={[
-        styles.base, 
-        isPrimary ? styles.primary : styles.secondary, 
-        style
-      ]}
-    >
-      <View>
-        <ThemedText 
-          type="button" 
-          color={isPrimary ? "inverse" : "blue"}
-        >
-          {children}
-        </ThemedText>
-      </View>
-    </Pressable>
-  );
-};
-
-export default Button;
