@@ -3,7 +3,7 @@ import { Models } from "react-native-appwrite";
 export interface UserProfile extends Models.Document {
     email: string;
     full_name: string;
-    role: 'citizen' | 'org_admin' | 'super_admin';
+    role: 'citizen' | 'org_viewer' | 'org_officer' | 'org_admin' | 'super_admin';
     organization_id?: string; 
     current_points: number;
     lifetime_points: number;
@@ -28,6 +28,7 @@ export interface Category extends Models.Document {
     default_points: number;
     priority: 'low' | 'medium' | 'high';
     is_active: boolean;
+    keywords: string[];
 }
 
 export interface Report extends Models.Document {
