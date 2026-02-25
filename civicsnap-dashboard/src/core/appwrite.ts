@@ -1,10 +1,18 @@
 import { Client, Account, Databases, Teams } from "appwrite";
 
+export const appwriteConfig = {
+    endpoint: process.env.REACT_APP_APPWRITE_ENDPOINT || "",
+    projectId: process.env.REACT_APP_APPWRITE_PROJECT_ID || "",
+    databaseId: process.env.REACT_APP_APPWRITE_DATABASE_ID || "",
+    profilesCollectionId: process.env.REACT_APP_APPWRITE_PROFILES_COLLECTION_ID || "",
+    organizationsCollectionId: process.env.REACT_APP_APPWRITE_ORGANIZATIONS_COLLECTION_ID || "",
+};
+
 const client = new Client()
 
 client
-    .setEndpoint(process.env.REACT_APP_APPWRITE_ENDPOINT || "localhost/v1")
-    .setProject(process.env.REACT_APP_APPWRITE_PROJECT_ID || "default_project_id"); 
+    .setEndpoint(appwriteConfig.endpoint)
+    .setProject(appwriteConfig.projectId); 
 
 export const account = new Account(client);
 export const databases = new Databases(client);
