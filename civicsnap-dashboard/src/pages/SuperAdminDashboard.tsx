@@ -1,23 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@core/AuthProvider';
 import { teams, databases, appwriteConfig } from '@core/appwrite';
-import { ID } from 'appwrite';
+import { ID, Models } from 'appwrite';
+import { Plus, X, Settings, Edit, Mail, Trash2} from 'lucide-react';
+
+import Header from '@components/Header';
 
 
-export default function SuperAdminDashboard() {
-    const { user, profile, logout } = useAuth();
-    
-    // Zichtbaarheid van het formulier
+interface Organization extends Models.Document {
+    name: string;
+    zip_codes: string;
+    contact_email: string;
+    logo_url?: string|null;
+    status: 'active' | 'blocked' | 'pending';
+}
+
+export default function SuperAdminDashboard() {   
     const [showForm, setShowForm] = useState(false);
-
-    // Formulier states
     const [name, setName] = useState('');
     const [contactEmail, setContactEmail] = useState('');
     const [zipCodes, setZipCodes] = useState('');
     const [logoUrl, setLogoUrl] = useState('');
-    
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+
+    const [organizations, setOrganizations] = useState<Organization[]>([]);
+    const [loadingOrganizations, setLoadingOrganizations] = useState(true);
+
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+    const closeDropdown = () => setActiveDropdown(null);
+
+    const fetchOrganizations = async () => {
+        setLoadingOrganizations(true);
+        try {
+            const organizationResponse = await databases.listDocuments(
+                appwriteConfig.databaseId,
+                appwriteConfig.organizationsCollectionId
+            );
+            setOrganizations(organizationResponse.documents as unknown as Organization[]);
+        }catch (error) {
+            console.error('Error fetching organizations:', error);
+        }finally {
+            setLoadingOrganizations(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOrganizations();
+    }, []);
 
     const handleCreateOrganization = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,39 +85,98 @@ export default function SuperAdminDashboard() {
 
             setMessage({ type: 'success', text: `Succes! ${name} is aangemaakt en de uitnodiging is gemaild naar ${contactEmail}.` });
             
-            // Leeg de velden EN klap het formulier weer dicht
+            
             setName('');
             setContactEmail('');
             setZipCodes('');
             setLogoUrl('');
             setShowForm(false); 
 
+            fetchOrganizations();
+
         } catch (error: any) {
             console.error(error);
-            setMessage({ type: 'error', text: error.message || 'Er is iets misgegaan bij het aanmaken.' });
+            setMessage({ type: 'error', text: error.message || 'There is been an error creating the organization.' });
         } finally {
             setLoading(false);
         }
     };
 
+    const toggleOrganizationStatus = async (org: Organization) => {
+            const newStatus = org.status === 'active' ? 'blocked' : 'active';
+            try {
+                await databases.updateDocument(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.organizationsCollectionId,
+                    org.$id,
+                    { status: newStatus }
+                );
+                setOrganizations(prevOrgs => prevOrgs.map(o => o.$id === org.$id ? { ...o, status: newStatus } : o));
+            }catch (error) {
+                console.error('Error updating organization status:', error);
+                setMessage({ type: 'error', text: 'Failed to update organization status.' });
+            }
+    };
+
+    const handleResendInvitation = async (org: Organization) => {
+        try {
+
+            const memberships = await teams.listMemberships(org.$id);
+
+            const existingMember = memberships.memberships.find(m => m.userEmail === org.contact_email);
+
+            if (existingMember) {
+                if(existingMember.confirm) {
+                    setMessage({ type: 'error', text: `The user with email ${org.contact_email} is already a member of this organization.` });
+                    closeDropdown();
+                    return;
+                }
+                await teams.deleteMembership(org.$id, existingMember.$id);
+            }
+            const loginUrl = `${window.location.origin}/login`;
+            await teams.createMembership(
+                org.$id,
+                ['org_admin'], 
+                org.contact_email,
+                undefined,
+                undefined, 
+                loginUrl, 
+                'Ambtenaar' 
+            );
+            setMessage({ type: 'success', text: `Invitation successfully resent to ${org.contact_email}.` });
+        } catch (error: any) {
+           console.error('Error resending invitation:', error);
+            setMessage({ type: 'error', text: error.message || 'Failed to resend invitation.' });
+        }
+        closeDropdown();
+    };
+
+    const handleDeleteOrganization = async (org: Organization) => {
+        if (!window.confirm(`Are you sure you want to delete the organization "${org.name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await databases.deleteDocument(appwriteConfig.databaseId, appwriteConfig.organizationsCollectionId, org.$id);
+            await teams.delete(org.$id);
+
+            setOrganizations(prevOrgs => prevOrgs.filter(o => o.$id !== org.$id));
+            setMessage({ type: 'success', text: `Organization "${org.name}" has been deleted.` });
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Failed to delete organization.' });
+        }
+        closeDropdown();
+    };
+
     return (
-        <div className="min-h-screen bg-[#F5F7FA] font-inter">
-            {/* Navigatiebalk */}
-            <nav className="bg-white shadow-sm px-8 py-4 flex justify-between items-center">
-                <h1 className="text-xl font-inter-bold text-[#0870C4]">CivicSnap Super Admin</h1>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600 font-inter-medium">{profile?.full_name || user?.email}</span>
-                    <button onClick={logout} className="px-4 py-2 bg-red-50 text-red-600 font-inter-semibold rounded-lg hover:bg-red-100 transition">
-                        Uitloggen
-                    </button>
-                </div>
-            </nav>
+        <div className="min-h-screen bg-[#F5F7FA] font-inter" onClick={closeDropdown}>
+        
+          <Header />
 
             <div className="p-8 max-w-6xl mx-auto mt-8">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-inter-bold">Overzicht Gemeentes</h2>
                     
-                    {/* De "Nieuwe Gemeente" Knop */}
                     {!showForm && (
                         <button 
                             onClick={() => setShowForm(true)}
@@ -98,14 +188,14 @@ export default function SuperAdminDashboard() {
                     )}
                 </div>
                 
-                {/* Globale Meldingen (bijv. als het formulier dichtklapt na succes) */}
+               
                 {message.text && !showForm && (
                     <div className={`p-4 rounded-xl mb-6 font-inter-medium ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                         {message.text}
                     </div>
                 )}
 
-                {/* Het Formulier (Alleen zichtbaar als showForm true is) */}
+                
                 {showForm && (
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
                         <div className="flex justify-between items-center mb-6">
@@ -157,10 +247,92 @@ export default function SuperAdminDashboard() {
                     </div>
                 )}
                 
-                {/* Hier komt straks de tabel met actieve gemeentes! */}
-                {!showForm && (
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center min-h-[200px] text-gray-400 font-inter-medium">
-                        De tabel met actieve gemeentes komt hier te staan...
+              
+               {!showForm && (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
+                        {loadingOrganizations ? (
+                            <div className="p-10 text-center text-gray-500 font-inter-medium">Organisaties laden...</div>
+                        ) : organizations.length === 0 ? (
+                            <div className="p-10 text-center text-gray-500 font-inter-medium">Nog geen organisaties gevonden.</div>
+                        ) : (
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100 text-gray-800 font-inter-bold text-sm bg-white">
+                                        <th className="py-4 px-6 w-24">Logo</th>
+                                        <th className="py-4 px-6">Naam Organisatie</th>
+                                        <th className="py-4 px-6">Hoofd Contactpersoon</th>
+                                        <th className="py-4 px-6">Aantal Leden</th>
+                                        <th className="py-4 px-6">Status</th>
+                                        <th className="py-4 px-6 text-center">Beheer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {organizations.map((org) => (
+                                        <tr key={org.$id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                            
+                                            <td className="py-3 px-6">
+                                                {org.logo_url ? (
+                                                    <img src={org.logo_url} alt={org.name} className="w-12 h-12 rounded-md object-cover border border-gray-200" />
+                                                ) : (
+                                                    <div className="w-14 h-12 bg-[#1DA1F2] rounded-md flex items-center justify-center shadow-sm">
+                                                        <span className="text-white font-bold text-sm lowercase truncate px-1">
+                                                            {org.name.split(' ')[1] || org.name}:
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            
+                                            
+                                            <td className="py-3 px-6 text-gray-500 font-inter-medium">{org.name}</td>
+                                            
+                                            
+                                            <td className="py-3 px-6 text-gray-500 font-inter-medium">{org.contact_email}</td>
+                                            
+                                            
+                                            <td className="py-3 px-6 text-gray-500 font-inter-medium">1</td>
+                                            
+                                            
+                                            <td className="py-3 px-6">
+                                                <button 
+                                                    className={`w-12 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${org.status === 'active' ? 'bg-[#0F9D58]' : 'bg-gray-400'}`}
+                                                    onClick={(e) => { e.stopPropagation();toggleOrganizationStatus(org); }}
+                                                >
+                                                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform duration-300 ${org.status === 'active' ? 'translate-x-6.5 left-[1px]' : 'translate-x-0.5'}`}></div>
+                                                </button>
+                                            </td>
+                                         
+                                            <td className="py-3 px-6 text-center relative">
+                                                <button 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        setActiveDropdown(activeDropdown === org.$id ? null : org.$id); 
+                                                    }}
+                                                    className="p-2 text-gray-400 hover:text-gray-700 transition-colors rounded-lg hover:bg-gray-100"
+                                                >
+                                                    <Settings size={20} />
+                                                </button>
+
+                                               
+                                                {activeDropdown === org.$id && (
+                                                    <div className="absolute right-12 top-10 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10 text-left animate-in fade-in zoom-in-95 duration-200">
+                                                        <button className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-inter-medium">
+                                                            <Edit size={16} /> Bewerken
+                                                        </button>
+                                                        <button onClick={(e) => { e.stopPropagation(); handleResendInvitation(org); }} className="w-full px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-inter-medium">
+                                                            <Mail size={16} /> Uitnodiging sturen
+                                                        </button>
+                                                        <div className="h-px bg-gray-100 my-1"></div>
+                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteOrganization(org); }} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-inter-medium">
+                                                            <Trash2 size={16} /> Verwijderen
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 )}
 
