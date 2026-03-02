@@ -154,7 +154,7 @@ export default function Dashboard() {
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 rounded-xl">
                                     <MapPin className="text-gray-300 mb-2" size={32} />
-                                    <span className="text-gray-400 text-sm font-medium">Kaart laden...</span>
+                                    <span className="text-gray-400 text-sm font-medium">{t('general.loading')}</span>
                                 </div>
                             )}
                         </div>
@@ -171,22 +171,24 @@ export default function Dashboard() {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                         </svg>
-                                        <span className="text-sm font-medium">Meldingen ophalen...</span>
+                                        <span className="text-sm font-medium">{t('general.reportsLoading')}</span>
                                     </div>
                                 </div>
                             ) : reports.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                                     <FileText size={40} className="mb-3 text-gray-300" />
-                                    <span className="text-sm font-medium">Geen meldingen gevonden.</span>
+                                    <span className="text-sm font-medium">{t('general.noReports')}</span>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
                                             <tr className="bg-gray-50">
-                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Locatie</th>
-                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actie</th>
+                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.reportsTable.date')}</th>
+                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.reportsTable.type')}</th>
+                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.reportsTable.location')}</th>
+                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.reportsTable.status')}</th>
+                                                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.reportsTable.actions')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -194,6 +196,8 @@ export default function Dashboard() {
                                                 const statusColors = getStatusColor(report.status);
                                                 return (
                                                     <tr key={report.$id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                        <td className="py-4 px-6 text-sm text-gray-600"></td>
+                                                        <td className="py-4 px-6 text-sm text-gray-600"></td>
                                                         <td className="py-4 px-6">
                                                             <div className="flex items-center gap-2">
                                                                 <MapPin size={14} className="text-gray-400" />
@@ -210,7 +214,7 @@ export default function Dashboard() {
                                                         </td>
                                                         <td className="py-4 px-6">
                                                             <button className="inline-flex items-center px-4 py-2 text-sm font-semibold text-[#0870C4] bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200">
-                                                                Bekijk
+                                                                {t('general.reportActionButtonTitle')}
                                                             </button>
                                                         </td>
                                                     </tr>

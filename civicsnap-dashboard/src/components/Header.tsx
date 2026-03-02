@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 
 import { useAuth } from "@core/AuthProvider";
+import { useTranslation } from "react-i18next";
 
 
 export default function Header() {
@@ -8,6 +9,7 @@ export default function Header() {
     const [showDropdown, setShowDropdown] = useState(false);
 
     const isSuperAdmin = profile?.role === 'super_admin';
+        const { t } = useTranslation();
 
     return (
         <header className="bg-[#0870C4] text-white px-6 py-4 flex justify-between items-center shadow-md relative z-50">
@@ -53,7 +55,7 @@ export default function Header() {
                             className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-3 text-sm font-inter-semibold transition-colors"
                         >
                             
-                            Uitloggen
+                           {t('general.logoutButton')}
                         </button>
                     </div>
                 )}

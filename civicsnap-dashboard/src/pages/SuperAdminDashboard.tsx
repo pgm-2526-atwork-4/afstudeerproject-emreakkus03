@@ -5,7 +5,7 @@ import { ID, Models } from 'appwrite';
 import { Plus, X, Settings, Edit, Mail, Trash2} from 'lucide-react';
 
 import Header from '@components/Header';
-
+import { useTranslation } from "react-i18next";
 
 interface Organization extends Models.Document {
     name: string;
@@ -37,6 +37,8 @@ export default function SuperAdminDashboard() {
     const [isUpdating, setIsUpdating] = useState(false);
 
     const closeDropdown = () => setActiveDropdown(null);
+
+    const { t } = useTranslation();
 
     const fetchOrganizations = async () => {
         setLoadingOrganizations(true);
@@ -222,7 +224,7 @@ export default function SuperAdminDashboard() {
 
             <div className="p-8 max-w-6xl mx-auto mt-8">
                 <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-2xl font-inter-bold">Overzicht Gemeentes</h2>
+                    <h2 className="text-2xl font-inter-bold">{t('superAdminDashboard.title')}</h2>
                     
                     {!showForm && (
                         <button 
@@ -230,7 +232,7 @@ export default function SuperAdminDashboard() {
                             className="flex items-center gap-2 px-5 py-3 bg-[#0870C4] text-white font-inter-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
                         >
                             
-                            Nieuwe Gemeente Aanmaken
+                           {t('superAdminDashboard.addOrganizatonButton')}
                         </button>
                     )}
                 </div>
@@ -246,7 +248,7 @@ export default function SuperAdminDashboard() {
                 {showForm && (
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-inter-bold text-gray-800">Gegevens Nieuwe Gemeente</h3>
+                            <h3 className="text-xl font-inter-bold text-gray-800">{t('superAdminDashboard.form.title')}</h3>
                             
                         </div>
 
@@ -259,30 +261,30 @@ export default function SuperAdminDashboard() {
                         <form onSubmit={handleCreateOrganization} className="flex flex-col gap-5">
                             <div className="grid grid-cols-2 gap-5">
                                 <div className="flex flex-col gap-2">
-                                    <label className="font-inter-semibold text-gray-700 text-sm">Naam Gemeente *</label>
-                                    <input type="text" placeholder="bijv. Stad Gent" value={name} onChange={(e) => setName(e.target.value)} className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4]" required />
+                                    <label className="font-inter-semibold text-gray-700 text-sm">{t('superAdminDashboard.form.nameLabel')}</label>
+                                    <input type="text" placeholder={t('superAdminDashboard.form.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4]" required />
                                 </div>
 
                                 <div className="flex flex-col gap-2">
-                                    <label className="font-inter-semibold text-gray-700 text-sm">Postcodes (met komma) *</label>
-                                    <input type="text" placeholder="bijv. 9000, 9050" value={zipCodes} onChange={(e) => setZipCodes(e.target.value)} className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4]" required />
+                                    <label className="font-inter-semibold text-gray-700 text-sm">{t('superAdminDashboard.form.zipcodeLabel')}</label>
+                                    <input type="text" placeholder={t('superAdminDashboard.form.zipcodePlaceholder')} value={zipCodes} onChange={(e) => setZipCodes(e.target.value)} className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4]" required />
                                 </div>
                             </div>
 
                             <div className="flex flex-col gap-2">
-                                <label className="font-inter-semibold text-gray-700 text-sm">E-mailadres Beheerder (org_admin) *</label>
-                                <input type="email" placeholder="admin@stad.gent" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4]" required />
-                                <p className="text-xs text-gray-500">Er wordt direct een uitnodiging gestuurd naar dit adres.</p>
+                                <label className="font-inter-semibold text-gray-700 text-sm">{t('superAdminDashboard.form.emailLabel')}</label>
+                                <input type="email" placeholder={t('superAdminDashboard.form.emailPlaceholder')} value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4]" required />
+                                <p className="text-xs text-gray-500">{t('superAdminDashboard.form.emailInfoText')}</p>
                             </div>
 
                             
 
                             <div className="flex gap-4 mt-4">
                                 <button type="submit" disabled={loading} className="flex-1 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                                    {loading ? 'Aanmaken & Uitnodigen...' : 'Gemeente Aanmaken'}
+                                    {loading ? t('superAdminDashboard.form.submitLoadingButton') : t('superAdminDashboard.form.submitButton')}
                                 </button>
                                 <button type="button" onClick={() => setShowForm(false)} className="px-6 py-4 rounded-xl bg-gray-100 text-gray-700 font-inter-bold hover:bg-gray-200 transition-colors">
-                                    Annuleren
+                                    {t('general.cancelButton')}
                                 </button>
                             </div>
                         </form>
@@ -293,19 +295,19 @@ export default function SuperAdminDashboard() {
                {!showForm && (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
                         {loadingOrganizations ? (
-                            <div className="p-10 text-center text-gray-500 font-inter-medium">Organisaties laden...</div>
+                            <div className="p-10 text-center text-gray-500 font-inter-medium">{t('superAdminDashboard.loadingOrganizations')}</div>
                         ) : organizations.length === 0 ? (
-                            <div className="p-10 text-center text-gray-500 font-inter-medium">Nog geen organisaties gevonden.</div>
+                            <div className="p-10 text-center text-gray-500 font-inter-medium">{t('superAdminDashboard.NoOrganizations')}</div>
                         ) : (
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 text-gray-800 font-inter-bold text-sm bg-white">
-                                        <th className="py-4 px-6 w-24">Logo</th>
-                                        <th className="py-4 px-6">Naam Organisatie</th>
-                                        <th className="py-4 px-6">Hoofd Contactpersoon</th>
-                                        <th className="py-4 px-6">Aantal Leden</th>
-                                        <th className="py-4 px-6">Status</th>
-                                        <th className="py-4 px-6 text-center">Beheer</th>
+                                        <th className="py-4 px-6 w-24">{t('superAdminDashboard.table.logo')}</th>
+                                        <th className="py-4 px-6">{t('superAdminDashboard.table.name')}</th>
+                                        <th className="py-4 px-6">{t('superAdminDashboard.table.cityAdmin')}</th>
+                                        <th className="py-4 px-6">{t('superAdminDashboard.table.totalMembers')}</th>
+                                        <th className="py-4 px-6">{t('superAdminDashboard.table.status')}</th>
+                                        <th className="py-4 px-6 text-center">{t('superAdminDashboard.table.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -358,14 +360,14 @@ export default function SuperAdminDashboard() {
                                                 {activeDropdown === org.$id && (
                                                     <div className="absolute right-12 top-10 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10 text-left animate-in fade-in zoom-in-95 duration-200">
                                                         <button onClick={(e) => {e.stopPropagation(); openEditModal(org); }} className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-inter-medium">
-                                                            <Edit size={16} /> Bewerken
+                                                            <Edit size={16} /> {t('superAdminDashboard.organizationSettings.editButton')}
                                                         </button>
                                                         <button onClick={(e) => { e.stopPropagation(); handleResendInvitation(org); }} className="w-full px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-inter-medium">
-                                                            <Mail size={16} /> Uitnodiging sturen
+                                                            <Mail size={16} /> {t('superAdminDashboard.organizationSettings.sendEmailButton')}
                                                         </button>
                                                         <div className="h-px bg-gray-100 my-1"></div>
                                                         <button onClick={(e) => { e.stopPropagation(); handleDeleteOrganization(org); }} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-inter-medium">
-                                                            <Trash2 size={16} /> Verwijderen
+                                                            <Trash2 size={16} /> {t('superAdminDashboard.organizationSettings.deleteButton')}
                                                         </button>
                                                     </div>
                                                 )}

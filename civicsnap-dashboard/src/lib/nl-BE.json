@@ -2,9 +2,14 @@
   "general": {
     "profileLoading": "Profiel laden...",
     "loading": "Laden...",
+    "reportsLoading": "Meldingen ophalen...",
+    "noReports": "Er zijn nog geen meldingen gemaakt.",
     "accesDeniedTitle": "Toegang geweigerd",
     "accesDeniedMessage": "Dit web-portaal is uitsluitend voor ambtenaren en beheerders. Gebruik de mobiele app om meldingen te maken en je punten te bekijken.",
-    "buttonLogoutForNotPermitted": "Uitloggen & Terug"
+    "buttonLogoutForNotPermitted": "Uitloggen & Terug",
+    "logoutButton": "Uitloggen",
+    "reportActionButtonTitle": "Bekijk",
+    "cancelButton": "Annuleren"
   },
   "login": {
     "titleNormal": "CivicSnap Admin",
@@ -28,7 +33,46 @@
       "announcements": "Aankondigingen",
       "settings": "Instellingen"
     },
+    "reportsTable": {
+      "date": "Datum",
+      "type": "Type",
+      "location": "Locatie",
+      "status": "Status",
+      "actions": "Acties"
+
+    },
     "title": "Dashboard",
     "latest_reports": "Nieuwste meldingen"
+  },
+  "superAdminDashboard": {
+      "title": "Overzicht Organisaties",
+      "addOrganizatonButton": "Nieuwe Organisatie Aanmaken",
+      "form": {
+        "title": "Gegevens Nieuwe Organisatie",
+        "namePlaceholder": "bijv. Stad Gent",
+        "nameLabel": "Naam Organisatie *",
+        "zipcodePlaceholder": "bijv. 9000, 9050",
+        "zipcodeLabel": "Postcodes (met komma) *",
+        "emailPlaceholder": "bijv. admin@stad.gent",
+        "emailLabel": "E-mailadres Beheerder *",
+        "emailInfoText": "Er wordt direct een uitnodiging gestuurd naar dit adres.",
+        "submitLoadingButton": "Aanmaken & Uitnodigen...",
+        "submitButton": "Organisatie Aanmaken"
+      },
+      "loadingOrganizations": "Organisaties laden...",
+      "NoOrganizations": "Nog geen organisaties gevonden.",
+      "table": {
+        "logo": "Logo",
+        "name": "Naam Organisatie",
+        "cityAdmin": "Hoofd Contactpersoon",
+        "totalMembers": "Aantal Leden",
+        "status": "Status",
+        "actions": "Beheer"
+      },
+      "organizationSettings": {
+        "editButton": "Bewerken",
+        "sendEmailButton": "Uitnodiging Sturen",
+        "deleteButton": "Verwijderen"
+      }
   }
 }
