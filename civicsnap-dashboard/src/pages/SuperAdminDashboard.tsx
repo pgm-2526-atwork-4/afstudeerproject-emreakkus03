@@ -83,7 +83,7 @@ export default function SuperAdminDashboard() {
 
             await teams.createMembership(
                 team.$id,
-                ['org_admin'], 
+                ['org_admin', 'owner'], 
                 contactEmail,
                 undefined,
                 undefined, 
@@ -144,7 +144,7 @@ export default function SuperAdminDashboard() {
             const loginUrl = `${window.location.origin}/login`;
             await teams.createMembership(
                 org.$id,
-                ['org_admin'], 
+                ['org_admin', 'owner'], 
                 org.contact_email,
                 undefined,
                 undefined, 
@@ -279,11 +279,11 @@ export default function SuperAdminDashboard() {
                             
 
                             <div className="flex gap-4 mt-4">
-                                <button type="submit" disabled={loading} className="flex-1 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                                    {loading ? t('superAdminDashboard.form.submitLoadingButton') : t('superAdminDashboard.form.submitButton')}
-                                </button>
                                 <button type="button" onClick={() => setShowForm(false)} className="px-6 py-4 rounded-xl bg-gray-100 text-gray-700 font-inter-bold hover:bg-gray-200 transition-colors">
                                     {t('general.cancelButton')}
+                                </button>
+                                <button type="submit" disabled={loading} className="flex-1 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                                    {loading ? t('superAdminDashboard.form.submitLoadingButton') : t('superAdminDashboard.form.submitButton')}
                                 </button>
                             </div>
                         </form>

@@ -33,7 +33,7 @@ export default function Header() {
                     {profile?.avatar_url ? (
                         <img 
                             src={profile.avatar_url} 
-                            alt="Profielfoto" 
+                            alt="profile" 
                             className="w-10 h-10 rounded-full border-2 border-white object-cover bg-white"
                         />
                     ) : (

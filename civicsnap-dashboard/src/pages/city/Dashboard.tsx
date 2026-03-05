@@ -146,7 +146,7 @@ export default function Dashboard() {
             <div className="flex">
                <Sidebar activeItem="dashboard"/>
 
-                <section className="flex-1 flex flex-col min-w-0 overflow-hidden p-8">
+                <main className="flex-1 flex flex-col min-w-0 overflow-hidden p-8">
                     <div className="max-w-6xl w-full mx-auto space-y-8">
                         <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
 
@@ -244,7 +244,7 @@ export default function Dashboard() {
                             )}
                         </div>
                     </div>
-                </section>
+                </main>
             </div>
         </div>
     );

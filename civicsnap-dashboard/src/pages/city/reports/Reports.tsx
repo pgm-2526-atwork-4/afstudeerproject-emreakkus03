@@ -185,7 +185,7 @@ export default function Reports() {
       <Header />
 
       <div className="flex">
-        <Sidebar activeItem="dashboard" />
+        <Sidebar activeItem="reports" />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden p-8">
           <div className="max-w-6xl w-full mx-auto space-y-6">

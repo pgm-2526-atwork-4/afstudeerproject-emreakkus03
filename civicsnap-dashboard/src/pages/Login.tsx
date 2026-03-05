@@ -5,6 +5,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
+import { Eye, EyeOff } from "lucide-react";
+
 export default function Login() {
     const [searchParams] = useSearchParams();
     const teamId = searchParams.get("teamId");
@@ -19,6 +21,7 @@ export default function Login() {
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const { checkAuth } = useAuth();
     const navigate = useNavigate();
@@ -47,28 +50,76 @@ export default function Login() {
         setError("");
 
         try {
-            await teams.updateMembershipStatus(teamId!, membershipId!, userId!, secret!);
+
+            try {
+                await teams.updateMembershipStatus(teamId!, membershipId!, userId!, secret!);
+                
+            } catch (error:any) {
+                if(error.message.includes("already") || error.code === 409) {
+                    setError("This invite has already been accepted. Please log in with your credentials.");
+                } else {
+                    throw error;
+                }
+            }
             const userAccount = await account.get();
             await account.updateName(name);
-            await account.updatePassword(password);
+            let wasExistingUser = false;
+            try {
+                await account.updatePassword(password);
+                
+            } catch (error:any) {
+                wasExistingUser = true;
+                console.log("Wachtwoord niet overschreven: gebruiker had al een account.");
+            }
 
-            await databases.createDocument(
-                appwriteConfig.databaseId,
-                appwriteConfig.profilesCollectionId,
-                userId!,
-                {
-                    email: userAccount.email,
-                    full_name: name,
-                    role: 'org_admin',
-                    organization_id: teamId,
-                    current_points: 0,
-                    lifetime_points: 1,
-                    is_banned: false,
-                    avatar_url: null
+            const memberships = await teams.listMemberships(teamId!);
+            const myMembership = memberships.memberships.find(m => m.userId === userId);
+
+            let assignedRole = 'org_viewer';
+            if (myMembership) {
+                if (myMembership.roles.includes('org_admin')) {
+                    assignedRole = 'org_admin';
+                } else if (myMembership.roles.includes('org_officer')) {
+                    assignedRole = 'org_officer';
                 }
-            );
+            }
+
+            try {
+                await databases.getDocument(appwriteConfig.databaseId, appwriteConfig.profilesCollectionId, userId!);
+
+                await databases.updateDocument(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.profilesCollectionId,
+                    userId!,
+                    {
+                        full_name: name,
+                        role: assignedRole,
+                        organization_id: teamId,
+                    }
+                );
+            } catch (error) {
+                await databases.createDocument(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.profilesCollectionId,
+                    userId!,
+                    {
+                        email: userAccount.email,
+                        full_name: name,
+                        role: assignedRole,
+                        organization_id: teamId,
+                        current_points: 0,
+                        lifetime_points: 1,
+                        is_banned: false,
+                        avatar_url: null
+                    }
+                );
+            }
+
 
             await checkAuth();
+            if (wasExistingUser) {
+                alert("Uitnodiging geaccepteerd! Omdat je al bekend was in het systeem, is je originele wachtwoord behouden.");
+            }
             navigate("/");
         } catch (error: any) {
             setError(error.message || "Failed to accept invite. Please try again.");
@@ -100,15 +151,22 @@ export default function Login() {
                             className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular"
                             required
                         />
-                        <input 
-                            type="password" 
-                            placeholder={t('login.registerPasswordPlaceholder')} 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular"
-                            required
-                            minLength={8}
-                        />
+                        <div className="relative">
+
+                            <input 
+                                type={showPassword ? "text" : "password"} 
+                                placeholder={t('login.registerPasswordPlaceholder')} 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular pr-12"
+                                required
+                                minLength={8}
+                            />
+
+                            <button type="button" onClick={()=> setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                         <button type="submit" disabled={loading} className="mt-4 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
                             {loading ? t('login.buttonAccept') : t('login.buttonAccountMaking')}
                         </button>
@@ -123,14 +181,21 @@ export default function Login() {
                             className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular"
                             required
                         />
-                        <input 
-                            type="password" 
-                            placeholder={t('login.loginPasswordPlaceholder')} 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular"
-                            required
-                        />
+                         <div className="relative">
+
+                            <input 
+                                type={showPassword ? "text" : "password"} 
+                                placeholder={t('login.loginPasswordPlaceholder')} 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular pr-12"
+                                required
+                            />
+
+                            <button type="button" onClick={()=> setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                         <button type="submit" disabled={loading} className="mt-4 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
                             {loading ? t('login.buttonLoading') : t('login.buttonLogin')}
                         </button>

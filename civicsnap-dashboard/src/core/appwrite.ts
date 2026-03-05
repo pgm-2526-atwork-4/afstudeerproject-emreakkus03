@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Teams } from "appwrite";
+import { Client, Account, Databases, Teams, Storage } from "appwrite";
 
 export const appwriteConfig = {
     endpoint: process.env.REACT_APP_APPWRITE_ENDPOINT || "",
@@ -8,6 +8,7 @@ export const appwriteConfig = {
     organizationsCollectionId: process.env.REACT_APP_APPWRITE_ORGANIZATIONS_COLLECTION_ID || "",
     reportsCollectionId: process.env.REACT_APP_APPWRITE_REPORTS_COLLECTION_ID || "",
     categoriesCollectionId: process.env.REACT_APP_APPWRITE_CATEGORIES_COLLECTION_ID || "",
+    storageBucketId: process.env.REACT_APP_APPWRITE_BUCKET_ID || "",
 };
 
 
@@ -21,6 +22,7 @@ client
 export const account = new Account(client);
 export const databases = new Databases(client);
 export const teams = new Teams(client);
+export const storage = new Storage(client);
 
 
 export default client;

@@ -15,7 +15,7 @@ export default function Sidebar({ activeItem }: SidebarProps) {
             { label: t('dashboard.menu.reports'), icon: FileText, href: '/reports', active: activeItem === 'reports' },
             { label: t('dashboard.menu.users'), icon: Users, href: '/', active: false },
             { label: t('dashboard.menu.announcements'), icon: Megaphone, href: '/', active: false },
-            { label: t('dashboard.menu.settings'), icon: Settings, href: '/', active: false },
+            { label: t('dashboard.menu.settings'), icon: Settings, href: '/settings', active: activeItem === 'settings'},
     ];
 
      return (
