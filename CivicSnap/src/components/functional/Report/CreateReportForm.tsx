@@ -81,6 +81,9 @@ export default function CreateReportForm({
   const [currentZipcode, setCurrentZipcode] = useState(zipcode);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
+  // send the google cloud vision api labels to the reports database
+  const [visionLabels, setVisionLabels] = useState<string[]>([]);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -173,6 +176,9 @@ export default function CreateReportForm({
 
       if (data.responses && data.responses[0].labelAnnotations) {
         const annotations = data.responses[0].labelAnnotations;
+
+        const rawLabels = annotations.map((annotation: any) => annotation.description.toLowerCase());
+        setVisionLabels(rawLabels);
 
         let currentCats = categories;
         if (currentCats.length === 0) {
@@ -350,6 +356,7 @@ export default function CreateReportForm({
           ai_detected_category: aiDetectedLabel ? aiDetectedLabel.substring(0, 50) : null,
           ai_confidence: aiConfidence > 0 ? aiConfidence : null,
           organization_id: matchedOrgId,
+          vision_labels: visionLabels.length > 0 ? visionLabels : [],
           ...(uploadedPhotoUri ? { photo_url: uploadedPhotoUri } : {}),
         },
       );
@@ -401,7 +408,7 @@ export default function CreateReportForm({
 )}
             <TouchableOpacity
               style={styles.deleteButtonTouchable}
-              onPress={() => {setLocalPhotoUri(null); setAiDetectedLabel(null); setAiConfidence(0);}}
+              onPress={() => {setLocalPhotoUri(null); setAiDetectedLabel(null); setAiConfidence(0); setVisionLabels([]); }}
             >
               <Image
                 style={styles.deleteButtonImage}

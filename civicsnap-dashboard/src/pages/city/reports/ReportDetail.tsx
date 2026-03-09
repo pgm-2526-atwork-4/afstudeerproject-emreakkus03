@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {useParams, useNavigate} from "react-router-dom";
+import { Query } from "appwrite";
 import { databases, appwriteConfig, googleMapsApiKey } from "@core/appwrite";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 
@@ -12,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import Header from "@components/Header";
 import Sidebar from "@components/Sidebar";
 
-import {Sparkles, ArrowLeft} from "lucide-react";
+import {Sparkles, ArrowLeft, Image as ImageIcon} from "lucide-react";
 import { useAuth } from "@core/AuthProvider";
 
 export default function ReportDetail() {
@@ -22,6 +23,9 @@ export default function ReportDetail() {
     const { t } = useTranslation();
 
     const [report, setReport] = useState<any>(null);
+    const [duplicates, setDuplicates] = useState<any[]>([]);
+
+    const [selectedDuplicate, setSelectedDuplicate] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     const [status, setStatus] = useState("");
@@ -33,7 +37,7 @@ export default function ReportDetail() {
     });
 
     useEffect(() => {
-        const fetchReport = async () => {
+        const fetchReportAndDuplicates = async () => {
             if(!id) return;
             try {
                 const response = await databases.getDocument(
@@ -44,13 +48,23 @@ export default function ReportDetail() {
                 setReport(response);
                 setStatus(response.status);
                 setAdminNote(response.admin_notes || "");
+
+                const duplicatesResponse = await databases.listDocuments(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.reportsCollectionId,
+                    [
+                        Query.equal('original_report_id', id),
+                        Query.orderDesc('$createdAt')
+                    ]
+                );
+                setDuplicates(duplicatesResponse.documents);
             } catch (error) {
                 console.error("Error fetching report:", error);
             } finally{
                 setLoading(false);
             }
         };
-        fetchReport();
+        fetchReportAndDuplicates();
     }, [id]);
 
     const handleSave = async () => {
@@ -100,6 +114,53 @@ export default function ReportDetail() {
                     points_awarded: newPointsAwarded,
                 }
             );
+
+            if (duplicates && duplicates.length > 0) {
+                const duplicateReward = 5;
+
+                for (const dup of duplicates) {
+                    const dupAlreadyAwarded = dup.points_awarded > 0;
+                    let dupPointsToAward = 0;
+
+                    if(positiveStatuses.includes(status) && !dupAlreadyAwarded) {
+                        dupPointsToAward = duplicateReward;
+
+                        try {
+                            const dupUserProfile = await databases.getDocument(
+                                appwriteConfig.databaseId,
+                                appwriteConfig.profilesCollectionId,
+                                dup.user_id
+                            );
+
+                            await databases.updateDocument(
+                                appwriteConfig.databaseId,
+                                appwriteConfig.profilesCollectionId,
+                                dup.user_id,
+                                {
+                                    current_points: (dupUserProfile.current_points || 0) + dupPointsToAward,
+                                }
+                            );
+                        } catch (error) {
+                            console.error("Error updating duplicate user profile:", error);
+                        }
+                    }
+
+                    try {
+                        await databases.updateDocument(
+                            appwriteConfig.databaseId,
+                            appwriteConfig.reportsCollectionId,
+                            dup.$id,
+                            {
+                                status: status,
+                                admin_notes: adminNote ? `[Gekoppeld aan hoofdmelding] ${adminNote}` : "[Afgehandeld via originele melding]",
+                                points_awarded: dupAlreadyAwarded ? dup.points_awarded : dupPointsToAward,
+                            }
+                        );
+                    } catch (error) {
+                        console.error("Error updating duplicate report:", error);
+                    }
+                }
+            }
 
             if (pointsAwardedNow > 0 ) {
                 toast.success(t("reportsDetail.pointsAwardedSuccess", { pointsAwardedNow: pointsAwardedNow }));
@@ -237,6 +298,77 @@ export default function ReportDetail() {
                             </div>
 
                         </div>
+
+                        {duplicates.length > 0 && (
+                            <div className="mt-8 ">
+                                <h2 className="text-xl font-bold text-gray-900 mb-6">
+                                    Gekoppelde Meldingen ({duplicates.length})
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {duplicates.map((dup) => (
+                                        <div key={dup.$id} onClick={() => setSelectedDuplicate(dup)} className="hover:cursor-pointer bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                                            <div className="h-32 bg-gray-100 relative">
+                                                {dup.photo_url ? (
+                                                    <img src={dup.photo_url} alt="Duplicate" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <ImageIcon className="text-gray-300" size={24} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-4 flex-1 flex flex-col">
+                                                <p className="text-xs text-gray-500 mb-2">
+                                                    {new Date(dup.$createdAt).toLocaleDateString("nl-BE")}
+                                                </p>
+                                                <p className="text-sm text-gray-800 line-clamp-3">
+                                                    "{dup.description}"
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- MODAL VOOR DUPLICATE DETAILS --- */}
+            {selectedDuplicate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-900">Gekoppelde Melding Details</h3>
+                            <button onClick={() => setSelectedDuplicate(null)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full">
+                                <span className="font-bold text-xl leading-none">&times;</span>
+                            </button>
+                        </div>
+                        
+                        {/* Content Scrollable */}
+                        <div className="overflow-y-auto p-6">
+                            <div className="w-full h-64 bg-gray-100 rounded-xl mb-6 overflow-hidden relative">
+                                {selectedDuplicate.photo_url ? (
+                                    <img src={selectedDuplicate.photo_url} alt="Duplicate" className="w-full h-full object-contain bg-black/5" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                        Geen foto beschikbaar
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Beschrijving van de melder</h4>
+                            <p className="text-gray-800 bg-gray-50 p-4 rounded-xl mb-4 border border-gray-100">
+                                "{selectedDuplicate.description}"
+                            </p>
+
+                            <div className="flex gap-4 text-sm text-gray-500">
+                                <p><strong>Gemeld op:</strong> {new Date(selectedDuplicate.$createdAt).toLocaleDateString("nl-BE")}</p>
+                                {selectedDuplicate.ai_detected_category && (
+                                    <p><strong>AI Detectie:</strong> {selectedDuplicate.ai_detected_category}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
                     </div>
                 </main>
             </div>

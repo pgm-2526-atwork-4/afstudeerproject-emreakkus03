@@ -23,6 +23,7 @@ interface Report extends Models.Document {
     category_name?: string;
     created_at: string;
     photo_url?: string;
+    is_duplicate: boolean;
 }
 
 const mapContainerStyle = {
@@ -77,6 +78,7 @@ export default function Dashboard() {
                     [
                         Query.equal('zip_code', zipCodesArray),
                         Query.equal('status', 'new'),
+                        Query.equal('is_duplicate', false),
                         Query.orderDesc('$createdAt'),
                         Query.limit(10)
                     ]

@@ -17,6 +17,7 @@ import Dashboard from "@pages/city/Dashboard";
 import Reports from "@pages/city/reports/Reports";
 import ReportDetail from "@pages/city/reports/ReportDetail";
 import Settings from "@pages/city/settings/Settings";
+import Announcements from "@pages/city/announcements/Announcements";
 
 function DashboardRouter() {
   const { profile } = useAuth();
@@ -112,6 +113,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/announcements"
+        element={
+          <ProtectedRoute>
+            <Announcements />
           </ProtectedRoute>
         }
       />

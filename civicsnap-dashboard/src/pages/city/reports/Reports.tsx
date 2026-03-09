@@ -13,9 +13,13 @@ import {
   Image as ImageIcon,
   FileText,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  MapPin,
+  Copy
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+
+import toast from "react-hot-toast";
 
 interface Report extends Models.Document {
   description: string;
@@ -28,6 +32,7 @@ interface Report extends Models.Document {
   category_name?: string;
   photo_url?: string;
   created_at: string;
+  is_duplicate: boolean;
 }
 
 export default function Reports() {
@@ -48,6 +53,7 @@ export default function Reports() {
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
 
   const [sortOrderDirection, setSortOrderDirection] = useState<'asc' | 'desc'>('desc');
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     setStatusFilter('all');
@@ -81,6 +87,7 @@ export default function Reports() {
           appwriteConfig.reportsCollectionId,
           [
             Query.equal("zip_code", zipCodesArray),
+            Query.equal("is_duplicate", false),
             Query.orderDesc("$createdAt"),
             Query.limit(100),
           ],
@@ -411,10 +418,58 @@ export default function Reports() {
                                 {getDisplayStatus(report.status)}
                               </span>
                             </td>
-                            <td className="py-4 px-6 text-center">
-                              <button className="p-2 text-gray-400 hover:text-[#0870C4] hover:bg-blue-50 rounded-lg transition-colors">
+                            <td className="py-4 px-6 text-center relative">
+                              <button onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenActionMenuId(openActionMenuId === report.$id ? null : report.$id)
+                              }} className={`p-2 rounded-lg transition-colors ${openActionMenuId === report.$id ? 'text-[#0870C4] bg-blue-50' : 'text-gray-400 hover:text-[#0870C4] hover:bg-blue-50'}`}>
                                 <MoreHorizontal size={20} />
                               </button>
+
+                              {openActionMenuId === report.$id && (
+      <div className="absolute right-10 top-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-2 overflow-hidden text-left">
+        
+       
+        <button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            navigate(`/reports/${report.$id}`); 
+          }}
+          className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+        >
+          <FileText size={16} className="text-gray-400" />
+          {t('general.reportActionButtonTitle', 'Bekijk details')}
+        </button>
+
+      
+        <button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            window.open(`https://maps.google.com/?q=${report.location_lat},${report.location_long}`, '_blank');
+            setOpenActionMenuId(null);
+          }}
+          className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+        >
+          <MapPin size={16} className="text-gray-400" />
+          Route (Maps)
+        </button>
+
+        
+        <button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            navigator.clipboard.writeText(report.address || "");
+            setOpenActionMenuId(null);
+            toast.success(`Adres gekopieerd: ${report.address}`);
+          }}
+          className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-50"
+        >
+          <Copy size={16} className="text-gray-400" />
+          Kopieer adres
+        </button>
+
+      </div>
+    )}
                             </td>
                           </tr>
                         );
