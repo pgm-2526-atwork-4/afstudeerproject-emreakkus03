@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
 import { account, teams, databases, appwriteConfig } from "@core/appwrite";
 import { useAuth } from "@core/AuthProvider";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -6,16 +6,20 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function Login() {
+    // Extract query parameters from the URL (used for team invite links)
     const [searchParams] = useSearchParams();
     const teamId = searchParams.get("teamId");
     const membershipId = searchParams.get("membershipId");
     const userId = searchParams.get("userId");
     const secret = searchParams.get("secret");
 
+    // Determine if the user arrived via an invite link (all 4 params must be present)
     const isInviteFlow = teamId && membershipId && userId && secret;
 
+    // Form state
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
@@ -23,58 +27,86 @@ export default function Login() {
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
+    // Auth context helper to refresh the current auth state after login
     const { checkAuth } = useAuth();
+    // React Router navigation hook
     const navigate = useNavigate();
 
+    // i18n translation hook
     const { t } = useTranslation();
 
+    /**
+     * Handles a normal email/password login (non-invite flow).
+     * Creates an Appwrite session and navigates to the home page on success.
+     */
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
 
         try {
+            // Create an email/password session via Appwrite
             await account.createEmailPasswordSession(email, password);
+            // Refresh the global auth state so the rest of the app knows the user is logged in
             await checkAuth();
+            // Redirect to the dashboard home page
             navigate("/");
         } catch (error: any) {
-            setError(error.message || "Login failed. Please check your credentials.");
+            // Display the error message from Appwrite, or a generic fallback
+            setError(error.message || t('login.error.loginFailed'));
         } finally {
             setLoading(false);
         }
     };
 
+    /**
+     * Handles the invite-accept flow when a user clicks a team invitation link.
+     * Steps:
+     *  1. Accept the team membership via Appwrite Teams API.
+     *  2. Update the user's name and (optionally) password.
+     *  3. Determine the role assigned via the membership.
+     *  4. Create or update the user's profile document in the database.
+     *  5. Redirect to the home page.
+     */
     const handleAcceptInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
 
         try {
-
+            // Step 1: Try to accept the team membership invitation
             try {
                 await teams.updateMembershipStatus(teamId!, membershipId!, userId!, secret!);
-                
-            } catch (error:any) {
-                if(error.message.includes("already") || error.code === 409) {
-                    setError("This invite has already been accepted. Please log in with your credentials.");
+            } catch (error: any) {
+                // If the invite was already accepted (HTTP 409 / "already" message), show a friendly error
+                if (error.message.includes("already") || error.code === 409) {
+                    setError(t('login.error.inviteAlreadyAccepted'));
                 } else {
+                    // Re-throw any other unexpected error
                     throw error;
                 }
             }
+
+            // Step 2: Fetch the current user account and update their display name
             const userAccount = await account.get();
             await account.updateName(name);
+
+            // Track whether this user already had a password set (i.e. an existing user)
             let wasExistingUser = false;
             try {
+                // Attempt to set the password; this will fail for users who already have one
                 await account.updatePassword(password);
-                
-            } catch (error:any) {
+            } catch (error: any) {
+                // Password update failed — the user already has a password, so we leave it as-is
                 wasExistingUser = true;
-                console.log("Wachtwoord niet overschreven: gebruiker had al een account.");
+                console.log(t('login.error.passwordNotOverwritten'));
             }
 
+            // Step 3: Determine the role from the team membership
             const memberships = await teams.listMemberships(teamId!);
             const myMembership = memberships.memberships.find(m => m.userId === userId);
 
+            // Default role is "org_viewer"; upgrade if the membership includes a higher role
             let assignedRole = 'org_viewer';
             if (myMembership) {
                 if (myMembership.roles.includes('org_admin')) {
@@ -84,9 +116,12 @@ export default function Login() {
                 }
             }
 
+            // Step 4: Create or update the user's profile document in the database
             try {
+                // Check if a profile document already exists for this user
                 await databases.getDocument(appwriteConfig.databaseId, appwriteConfig.profilesCollectionId, userId!);
 
+                // Profile exists — update it with the new name, role, and organization
                 await databases.updateDocument(
                     appwriteConfig.databaseId,
                     appwriteConfig.profilesCollectionId,
@@ -98,6 +133,7 @@ export default function Login() {
                     }
                 );
             } catch (error) {
+                // Profile does not exist yet — create a brand-new profile document
                 await databases.createDocument(
                     appwriteConfig.databaseId,
                     appwriteConfig.profilesCollectionId,
@@ -115,88 +151,129 @@ export default function Login() {
                 );
             }
 
-
+            // Step 5: Refresh global auth state and navigate to the home page
             await checkAuth();
+
+            // Show a toast if the user already existed (their password was not changed)
             if (wasExistingUser) {
-                alert("Uitnodiging geaccepteerd! Omdat je al bekend was in het systeem, is je originele wachtwoord behouden.");
+                toast.success(t('login.success.existingUser'));
             }
+
             navigate("/");
         } catch (error: any) {
-            setError(error.message || "Failed to accept invite. Please try again.");
+            // Catch-all error for the entire invite flow
+            setError(error.message || t('login.error.inviteAcceptFailed'));
         } finally {
             setLoading(false);
         }
     };
 
-   return (
+    return (
+        // Full-screen centered container with a light gray background
         <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA] font-inter">
+            {/* White card wrapper */}
             <div className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-md text-center">
-                <h1 className="text-3xl font-inter-bold text-gray-900 mb-2">{isInviteFlow ? t('login.titleInviteFlow') : t('login.titleNormal')}</h1>
-                <p className="text-gray-500 mb-8 font-inter-regular">{isInviteFlow 
-                        ? t('login.descriptionInviteFlow') 
-                        : t('login.descriptionNormal')}</p>
-                
+                {/* Page title — changes depending on whether it's an invite flow or normal login */}
+                <h1 className="text-3xl font-inter-bold text-gray-900 mb-2">
+                    {isInviteFlow ? t('login.titleInviteFlow') : t('login.titleNormal')}
+                </h1>
+
+                {/* Subtitle / description */}
+                <p className="text-gray-500 mb-8 font-inter-regular">
+                    {isInviteFlow
+                        ? t('login.descriptionInviteFlow')
+                        : t('login.descriptionNormal')}
+                </p>
+
+                {/* Error banner — only shown when there is an error message */}
                 {error && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-6 text-sm font-inter-medium">
                         {error}
                     </div>
                 )}
-{isInviteFlow ? (
-               <form onSubmit={handleAcceptInvite} className="flex flex-col gap-4">
-                        <input 
-                            type="text" 
-                            placeholder={t('login.registerNamePlaceholder')} 
+
+                {isInviteFlow ? (
+                    /* ========== INVITE FLOW FORM ========== */
+                    <form onSubmit={handleAcceptInvite} className="flex flex-col gap-4">
+                        {/* Full name input (required for new account setup) */}
+                        <input
+                            type="text"
+                            placeholder={t('login.registerNamePlaceholder')}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular"
                             required
                         />
-                        <div className="relative">
 
-                            <input 
-                                type={showPassword ? "text" : "password"} 
-                                placeholder={t('login.registerPasswordPlaceholder')} 
+                        {/* Password input with show/hide toggle */}
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder={t('login.registerPasswordPlaceholder')}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular pr-12"
                                 required
                                 minLength={8}
                             />
-
-                            <button type="button" onClick={()=> setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                            {/* Toggle password visibility button */}
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            >
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
                         </div>
-                        <button type="submit" disabled={loading} className="mt-4 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
+
+                        {/* Submit button — label changes while loading */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="mt-4 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
                             {loading ? t('login.buttonAccept') : t('login.buttonAccountMaking')}
                         </button>
                     </form>
-) : (
-    <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                        <input 
-                            type="email" 
-                            placeholder={t('login.loginEmailPlaceholder')} 
+                ) : (
+                    /* ========== NORMAL LOGIN FORM ========== */
+                    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                        {/* Email input */}
+                        <input
+                            type="email"
+                            placeholder={t('login.loginEmailPlaceholder')}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular"
                             required
                         />
-                         <div className="relative">
 
-                            <input 
-                                type={showPassword ? "text" : "password"} 
-                                placeholder={t('login.loginPasswordPlaceholder')} 
+                        {/* Password input with show/hide toggle */}
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder={t('login.loginPasswordPlaceholder')}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0870C4] font-inter-regular pr-12"
                                 required
                             />
-
-                            <button type="button" onClick={()=> setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                            {/* Toggle password visibility button */}
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            >
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
                         </div>
-                        <button type="submit" disabled={loading} className="mt-4 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
+
+                        {/* Submit button — label changes while loading */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="mt-4 p-4 rounded-xl bg-[#0870C4] text-white font-inter-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
                             {loading ? t('login.buttonLoading') : t('login.buttonLogin')}
                         </button>
                     </form>
@@ -204,5 +281,4 @@ export default function Login() {
             </div>
         </div>
     );
-
-};
+}
