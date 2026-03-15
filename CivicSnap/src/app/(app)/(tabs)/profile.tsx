@@ -1,39 +1,38 @@
-import React, { useEffect, useState } from "react"; // Import React and hooks
+import React, { useEffect, useState, useRef } from "react";
+import { Animated } from "react-native";
 import {
-    View, // Base container component
-    StyleSheet, // Utility for creating styles
-    ScrollView, // Scrollable vertical container
-    Image, // Image component for avatar/icons
-    TouchableOpacity, // Pressable wrapper
-    ActivityIndicator, // Loading spinner
-    Text, // Text rendering component
-} from "react-native"; // Import UI primitives from React Native
-import { SafeAreaView } from "react-native-safe-area-context"; // Respect device safe areas
-import { useRouter } from "expo-router"; // Navigation hook from Expo Router
-import { Ionicons } from "@expo/vector-icons"; // Icon set used in UI
+    View,
+    StyleSheet,
+    ScrollView,
+    Image,
+    TouchableOpacity,
+    ActivityIndicator,
+    Text,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-// ---- Context & API ---- // Section label for context and API imports
-import { useAuthContext } from "@components/functional/Auth/authProvider"; // Authentication/profile context
-import { API } from "@core/networking/api"; // API client abstraction
-import { useRealtime } from "@core/modules/realtimeProvider/RealtimeProvider"; // Realtime update context
+import { useAuthContext } from "@components/functional/Auth/authProvider";
+import { API } from "@core/networking/api";
+import { useRealtime } from "@core/modules/realtimeProvider/RealtimeProvider";
 
-// ---- Styling ---- // Section label for theme imports
-import { Variables } from "@/style/theme"; // Theme variables (colors/fonts/sizes)
+import { Variables } from "@/style/theme";
 
 export default function ProfileScreen() {
-    // Profile screen component
-    const router = useRouter(); // Router instance for navigation
-    const { profile } = useAuthContext(); // Current authenticated user profile
-    const { lastUpdate } = useRealtime(); // Timestamp/token that changes on realtime events
+    const router = useRouter();
+    const { profile } = useAuthContext();
+    const { lastUpdate } = useRealtime();
 
-    const [userReports, setUserReports] = useState<any[]>([]); // User reports state
-    const [loading, setLoading] = useState(true); // Loading state for report fetch
+    const [userReports, setUserReports] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // --- User data --- // Section label for profile-derived values
    const [displayName, setDisplayName] = useState(profile?.full_name || "Gebruiker");
 const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url);
 const [points, setPoints] = useState(profile?.current_points || 0);
 const [currentLevel, setCurrentLevel] = useState(profile?.lifetime_points || 1);
+
+const animatedProgress = useRef(new Animated.Value(0)).current;
 
 useEffect(() => {
     if (profile) {
@@ -45,214 +44,185 @@ useEffect(() => {
 }, [profile]);
 
     useEffect(() => {
-        // Fetch user reports when profile or realtime update changes
-        if (!profile?.$id) return; // Exit if user id is not available
+        if (!profile?.$id) return;
 
         const fetchUserReports = async () => {
-            // Async function to fetch and process reports
             try {
                 const response = await API.database.listDocuments(
-                    API.config.databaseId, // Database id
-                    API.config.reportsCollectionId, // Reports collection id
+                    API.config.databaseId,
+                    API.config.reportsCollectionId,
                 );
 
                 let myReports = response.documents.filter(
-                    (doc: any) => doc.user_id === profile.$id, // Keep only reports created by current user
+                    (doc: any) => doc.user_id === profile.$id,
                 );
                 myReports.sort(
                     (a: any, b: any) =>
-                        new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime(), // Newest first
+                        new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime(),
                 );
 
-                // NEW: Iterate over all reports to resolve category_name
                 const reportsWithCategories = await Promise.all(
                     myReports.map(async (report: any) => {
-                        // Map each report asynchronously
-                        let fetchedCategoryName = "Probleem"; // Default category label
+                        let fetchedCategoryName = "Probleem";
 
                         if (report.category_id) {
-                            // Resolve category only if category_id exists
                             try {
                                 if (
-                                    typeof report.category_id === "object" && // category may already be expanded object
-                                    report.category_id.name // ensure object has name
+                                    typeof report.category_id === "object" &&
+                                    report.category_id.name
                                 ) {
-                                    fetchedCategoryName = report.category_id.name; // Use expanded category name
+                                    fetchedCategoryName = report.category_id.name;
                                 } else {
                                     const categoryData = await API.database.getDocument(
-                                        API.config.databaseId, // Database id
-                                        API.config.categoriesCollectionId, // Categories collection id
-                                        report.category_id, // Category document id
+                                        API.config.databaseId,
+                                        API.config.categoriesCollectionId,
+                                        report.category_id,
                                     );
-                                    fetchedCategoryName = categoryData.name || "Probleem"; // Use fetched name with fallback
+                                    fetchedCategoryName = categoryData.name || "Probleem";
                                 }
                             } catch (catError) {
-                                // Handle category fetch errors per report
                                 console.error(
-                                    `Could not fetch category for report ${report.$id}:`, // Error message (translated)
-                                    catError, // Original error object
+                                    `Could not fetch category for report ${report.$id}:`,
+                                    catError,
                                 );
                             }
                         }
 
-                        // Return report with additional category_name field
-                        return { ...report, category_name: fetchedCategoryName }; // Enriched report object
+                        return { ...report, category_name: fetchedCategoryName };
                     }),
                 );
 
-                // Store report list including resolved category names
-                setUserReports(reportsWithCategories); // Update report state
+                setUserReports(reportsWithCategories);
             } catch (error) {
-                // Handle report list fetch errors
-                console.error("Error fetching reports:", error); // Error message (translated)
+                console.error("Error fetching reports:", error);
             } finally {
-                // Always clear loading flag
-                setLoading(false); // Mark loading as finished
+                setLoading(false);
             }
         };
 
-        fetchUserReports(); // Trigger report fetch
-    }, [profile?.$id, lastUpdate]); // Re-run when user id or realtime token changes
+        fetchUserReports();
+    }, [profile?.$id, lastUpdate]);
 
-    // --- NEW: Realtime profile points updates --- // Section label
     useEffect(() => {
-        // Fetch fresh profile to keep points/XP in sync
-        if (!profile?.$id) return; // Exit if user id is not available
+        if (!profile?.$id) return;
 
         const fetchFreshProfile = async () => {
-            // Async function to fetch latest profile document
             try {
                 const freshData = await API.database.getDocument(
-                    API.config.databaseId, // Database id
-                    API.config.profilesCollectionId, // Fetch profile collection instead of reports
-                    profile.$id, // Current profile document id
+                    API.config.databaseId,
+                    API.config.profilesCollectionId,
+                    profile.$id,
                 );
 
-                // Update local state so UI updates immediately
                 setDisplayName(freshData.full_name || "Gebruiker");
         setAvatarUrl(freshData.avatar_url);
         setPoints(freshData.current_points || 0);
         setCurrentLevel(freshData.lifetime_points || 1);
             } catch (error) {
-                // Handle profile refresh errors
-                console.error("Error updating profile in realtime:", error); // Error message (translated)
+                console.error("Error updating profile in realtime:", error);
             }
         };
 
-        fetchFreshProfile(); // Trigger profile refresh
-    }, [lastUpdate, profile?.$id]); // Re-run on realtime updates and profile id change
+        fetchFreshProfile();
+    }, [lastUpdate, profile?.$id]);
 
-    // --- Calculations --- // Section label
-    const totalReports = userReports.length; // Total number of user reports
+    const totalReports = userReports.length;
     const resolvedReports = userReports.filter(
-        (r) => r.status === "resolved", // Keep resolved items
-    ).length; // Count resolved reports
+        (r) => r.status === "resolved",
+    ).length;
 
-    // --- Exponential Level Logic --- // Section label
     const calculateLevelInfo = (totalXp: number) => {
-        // Helper to derive level and progress
-        let tempLevel = 1; // Start level
-        let xpForNextTier = 1000; // XP needed to reach level 2
-        let remainingXp = totalXp; // Remaining XP to distribute over tiers
+        let tempLevel = 1;
+        let xpForNextTier = 1000;
+        let remainingXp = totalXp;
 
-        // Loop scales infinitely: L2=1000, L3=1500, L4=2000, etc.
         while (remainingXp >= xpForNextTier) {
-            // Keep leveling while enough XP remains
-            remainingXp -= xpForNextTier; // Consume XP for current tier
-            tempLevel++; // Increase level
-            xpForNextTier += 500; // Increase next tier requirement
+            remainingXp -= xpForNextTier;
+            tempLevel++;
+            xpForNextTier += 500;
         }
 
-        const percentage = (remainingXp / xpForNextTier) * 100; // Progress to next level in %
-        const needed = xpForNextTier - remainingXp; // XP still needed to level up
+        const percentage = (remainingXp / xpForNextTier) * 100;
+        const needed = xpForNextTier - remainingXp;
 
         return {
-            calculatedLevel: tempLevel, // Computed level
-            progressPercent: percentage, // Progress percentage
-            pointsNeeded: needed, // Remaining points to next level
+            calculatedLevel: tempLevel,
+            progressPercent: percentage,
+            pointsNeeded: needed,
         };
     };
 
-    // currentLevel contains lifetime_points (XP) from profile data
     const { calculatedLevel, progressPercent, pointsNeeded } =
-        calculateLevelInfo(currentLevel); // Compute level metadata
+        calculateLevelInfo(currentLevel);
+
+        useEffect(() => {
+    Animated.timing(animatedProgress, {
+        toValue: progressPercent,
+        duration: 800,
+        useNativeDriver: false,
+    }).start();
+}, [progressPercent]);
 
     const formatDate = (dateString: string) => {
-        // Date formatting helper
         return new Date(dateString).toLocaleDateString("nl-NL", {
-            // Dutch locale output
-            day: "2-digit", // Two-digit day
-            month: "short", // Short month
-            year: "numeric", // Full year
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
         });
     };
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
-            {/* Root safe-area container */}
             <ScrollView bounces={true} showsVerticalScrollIndicator={false}>
-                {/* Main scroll area */}
-                <View style={styles.header}>
-                    {/* Header row */}
-                    <Text style={styles.headerTitle}>Profiel</Text>
-                    {/* Screen title */}
-                    <TouchableOpacity
-                        onPress={() => router.push("/(app)/settings" as any)} // Navigate to settings
-                    >
-                        <Ionicons
-                            style={styles.settingsIcon} // Settings icon style
-                            name="settings-outline" // Icon name
-                            size={28} // Icon size
-                            color={Variables.colors.textLight} // Icon color
-                        />
-                    </TouchableOpacity>
-                </View>
+             
+<View style={styles.header}>
+    <View style={{ width: 28 }} /> 
+    <Text style={styles.headerTitle}>Profiel</Text>
+    <TouchableOpacity onPress={() => {
+        router.push("/(app)/settings" as any);
+    }}>
+        <Ionicons
+            name="settings-outline"
+            size={28}
+            color={Variables.colors.textLight}
+        />
+    </TouchableOpacity>
+</View>
 
                 <View style={styles.profileSection}>
-                    {/* Top profile block */}
                     <View style={styles.avatarContainer}>
-                        {/* Avatar wrapper */}
                         <Image
                             source={
-                                avatarUrl // Use remote avatar if available
-                                    ? { uri: avatarUrl } // Remote source
-                                    : require("@assets/icons/User.png") // Local fallback image
+                                avatarUrl
+                                    ? { uri: avatarUrl }
+                                    : require("@assets/icons/User.png")
                             }
-                            style={styles.avatar} // Avatar styling
+                            style={styles.avatar}
                         />
                         <TouchableOpacity style={styles.editBadge}  onPress={() => router.push("/(app)/settings/edit-profile" as any)}>
-                            {/* Edit icon badge (currently no action) */}
                             <Ionicons name="pencil" size={14} color="white" />
-                            {/* Pencil icon */}
                         </TouchableOpacity>
                     </View>
 
                     <Text style={styles.nameText}>{displayName}</Text>
-                    {/* Display name */}
 
                     <View style={styles.levelPointsRow}>
-                        {/* Level and points row */}
                         <Text style={styles.levelText}>Level {calculatedLevel}</Text>
-                        {/* Current level label */}
                         <View style={styles.pointsGroup}>
-                            {/* Points + diamond group */}
                             <Text style={styles.pointsText}>{points}</Text>
-                            {/* Current points number */}
                             <Image
-                                source={require("@assets/icons/Diamant.png")} // Diamond icon
-                                style={styles.diamondIcon} // Diamond icon style
+                                source={require("@assets/icons/Diamant.png")}
+                                style={styles.diamondIcon}
                             />
                         </View>
                     </View>
                 </View>
 
                 <View style={styles.statsContainer}>
-                    {/* Stats cards row */}
-                    {/* Total reports - now tappable */}
                     <TouchableOpacity
-                        style={styles.statCard} // Card style
-                        activeOpacity={0.7} // Tap opacity
-                        onPress={() => router.push("/(app)/report/my-reports" as any)} // Go to all reports
+                        style={styles.statCard}
+                        activeOpacity={0.7}
+                        onPress={() => router.push("/(app)/report/my-reports" as any)}
                     >
                         <Text style={styles.statCardTitle}>
                             Totaal aantal{"\n"}meldingen
@@ -262,11 +232,10 @@ useEffect(() => {
                         </Text>
                     </TouchableOpacity>
 
-                    {/* Resolved reports - also tappable */}
                     <TouchableOpacity
-                        style={styles.statCard} // Card style
-                        activeOpacity={0.7} // Tap opacity
-                        onPress={() => router.push("/(app)/report/my-reports" as any)} // Go to all reports
+                        style={styles.statCard}
+                        activeOpacity={0.7}
+                        onPress={() => router.push("/(app)/report/my-reports" as any)}
                     >
                         <Text style={styles.statCardTitle}>Opgeloste{"\n"}meldingen</Text>
                         <Text style={styles.statCardNumber}>
@@ -276,41 +245,32 @@ useEffect(() => {
                 </View>
 
                 <View style={styles.section}>
-                    {/* Level section */}
                     <Text style={styles.sectionTitle}>Mijn level</Text>
-                    {/* Section title */}
 
                     <View style={styles.levelBarWrapper}>
-                        {/* Progress area wrapper */}
                         <View style={styles.progressBarBackground}>
-                            {/* Progress background */}
-                            <View
-                                style={[
-                                    styles.progressBarFill, // Filled progress style
-                                    { width: `${progressPercent}%` }, // Dynamic width based on progress
-                                ]}
-                            >
-                                {/* Avatar on progress bar (with real profile image) */}
+                           <Animated.View style={[ styles.progressBarFill, { width: animatedProgress.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+})}]}>
                                 <View style={styles.progressAvatarWrapper}>
-                                    {/* Floating avatar wrapper */}
                                     <Image
                                         source={
-                                            avatarUrl // Use remote avatar if present
-                                                ? { uri: avatarUrl } // Remote source
-                                                : require("@assets/icons/User.png") // Local fallback
+                                            avatarUrl
+                                                ? { uri: avatarUrl }
+                                                : require("@assets/icons/User.png")
                                         }
-                                        style={styles.progressAvatar} // Avatar style on progress bar
+                                        style={styles.progressAvatar}
                                     />
                                 </View>
-                            </View>
+                            </Animated.View>
                         </View>
 
                         <View style={styles.levelLabelsRow}>
-                            {/* Row with current level, needed points, next level */}
                             <Text
                                 style={[
-                                    styles.levelLabelText, // Base label style
-                                    { color: Variables.colors.primary }, // Highlight current level label
+                                    styles.levelLabelText,
+                                    { color: Variables.colors.primary },
                                 ]}
                             >
                                 Level {calculatedLevel}
@@ -328,102 +288,82 @@ useEffect(() => {
                 </View>
 
                 <View style={styles.section}>
-                    {/* Reports section */}
                     <View style={styles.sectionHeader}>
-                        {/* Section title + action row */}
                         <Text style={styles.sectionTitle}>Mijn meldingen</Text>
-                        {/* Section title */}
                         {userReports.length > 3 && (
-                            // Show action only when more than 3 reports exist
                             <TouchableOpacity
-                                onPress={() => router.push("/(app)/report/my-reports" as any)} // Navigate to full report list
+                                onPress={() => router.push("/(app)/report/my-reports" as any)}
                             >
                                 <Text style={styles.viewAllText}>Bekijk alles</Text>
-                                {/* View all action text */}
                             </TouchableOpacity>
                         )}
                     </View>
 
                     {loading ? (
-                        // Loading state
                         <ActivityIndicator
-                            size="small" // Spinner size
-                            color={Variables.colors.primary} // Spinner color
-                            style={{ marginTop: 20 }} // Spinner margin
+                            size="small"
+                            color={Variables.colors.primary}
+                            style={{ marginTop: 20 }}
                         />
                     ) : userReports.length === 0 ? (
-                        // Empty state
                         <Text style={styles.emptyText}>
                             Je hebt nog geen meldingen gemaakt.
                         </Text>
                     ) : (
-                        // List first 3 reports
                         userReports.slice(0, 3).map((report: any) => {
-                            // --- Realtime status logic (same as detail page) ---
-                            const isInvalid = report.status === "invalid"; // Rejected status
-                            const isResolved = report.status === "resolved"; // Resolved status
+                            const isInvalid = report.status === "invalid";
+                            const isResolved = report.status === "resolved";
                             const isInProgress =
-                                report.status === "approved" || report.status === "in_progress"; // In-progress statuses
-                            // If none of the above applies, default status is "new" (Reported)
+                                report.status === "approved" || report.status === "in_progress";
 
-                            // Determine colors/icons based on status
-                            let bgColor = "#E3F2FD"; // Default blue (new)
-                            let iconColor = "#1976D2"; // Default icon/text color
-                            let iconName = "document-text"; // Default icon
-                            let statusText = "Gemeld"; // Default status label
+                            let bgColor = "#E3F2FD";
+                            let iconColor = "#1976D2";
+                            let iconName = "document-text";
+                            let statusText = "Gemeld";
 
                             if (isInvalid) {
-                                // Rejected state style
-                                bgColor = "#FFEBEE"; // Red background
-                                iconColor = "#D32F2F"; // Red icon/text
-                                iconName = "close-circle"; // Rejected icon
-                                statusText = "Afgewezen"; // Rejected label
+                                bgColor = "#FFEBEE";
+                                iconColor = "#D32F2F";
+                                iconName = "close-circle";
+                                statusText = "Afgewezen";
                             } else if (isResolved) {
-                                // Resolved state style
-                                bgColor = "#E8F5E9"; // Green background
-                                iconColor = "#388E3C"; // Green icon/text
-                                iconName = "checkmark-circle"; // Resolved icon
-                                statusText = "Opgelost"; // Resolved label
+                                bgColor = "#E8F5E9";
+                                iconColor = "#388E3C";
+                                iconName = "checkmark-circle";
+                                statusText = "Opgelost";
                             } else if (isInProgress) {
-                                // In-progress state style
-                                bgColor = "#FFF3E0"; // Orange background
-                                iconColor = "#F57C00"; // Orange icon/text
-                                iconName = "build"; // In-progress icon
-                                statusText = "In behandeling"; // In-progress label
+                                bgColor = "#FFF3E0";
+                                iconColor = "#F57C00";
+                                iconName = "build";
+                                statusText = "In behandeling";
                             }
 
                             return (
                                 <TouchableOpacity
-                                    key={report.$id} // Stable list key
-                                    style={styles.reportCard} // Card style
+                                    key={report.$id}
+                                    style={styles.reportCard}
                                     onPress={() =>
-                                        router.push(`/(app)/report/${report.$id}` as any) // Navigate to report detail
+                                        router.push(`/(app)/report/${report.$id}` as any)
                                     }
                                 >
-                                    {/* --- ICON WRAPPER --- */}
                                     <View
                                         style={[
-                                            styles.statusIconWrapper, // Icon wrapper base style
-                                            { backgroundColor: bgColor }, // Dynamic status background
+                                            styles.statusIconWrapper,
+                                            { backgroundColor: bgColor },
                                         ]}
                                     >
-                                        {/* If you want custom Figma icons, replace Ionicons with Image */}
                                         <Ionicons
-                                            name={iconName as any} // Dynamic icon name
-                                            size={26} // Icon size
-                                            color={iconColor} // Dynamic icon color
+                                            name={iconName as any}
+                                            size={26}
+                                            color={iconColor}
                                         />
                                     </View>
 
-                                    {/* --- TEXT WRAPPER --- */}
                                     <View style={styles.reportCardContent}>
-                                        {/* Text content area */}
                                         <View style={styles.reportHeaderRow}>
-                                            {/* Date + status row */}
                                             <Text style={styles.reportDate}>
                                                 {formatDate(report.$createdAt)}
                                             </Text>
-                                            {/* Status badge text */}
                                             <Text
                                                 style={[styles.statusBadgeText, { color: iconColor }]}
                                             >
@@ -431,7 +371,6 @@ useEffect(() => {
                                             </Text>
                                         </View>
                                         <Text style={styles.reportAddress} numberOfLines={2}>
-                                            {/* Report summary line */}
                                             <Text style={{ fontFamily: Variables.fonts.bold }}>
                                                 {report.category_name || "Probleem"}:
                                             </Text>{" "}
@@ -440,9 +379,9 @@ useEffect(() => {
                                     </View>
 
                                     <Ionicons
-                                        name="chevron-forward" // Chevron indicator
-                                        size={20} // Chevron size
-                                        color={Variables.colors.textLight} // Chevron color
+                                        name="chevron-forward"
+                                        size={20}
+                                        color={Variables.colors.textLight}
                                     />
                                 </TouchableOpacity>
                             );
@@ -456,292 +395,244 @@ useEffect(() => {
 
 const styles = StyleSheet.create({
     container: {
-        // Root container style
-        flex: 1, // Fill available screen
-        backgroundColor: Variables.colors.background || "#F8F9FA", // Screen background color
+        flex: 1,
+        backgroundColor: Variables.colors.background || "#F8F9FA",
     },
     header: {
-        // Header wrapper style
-        position: "relative", // Allow absolute-positioned icon
-        flexDirection: "row", // Horizontal layout
-        justifyContent: "center", // Center title horizontally
-        alignItems: "center", // Center items vertically
-        paddingHorizontal: 20, // Horizontal spacing
-        paddingVertical: 10, // Vertical spacing
-    },
-    headerTitle: {
-        // Header title text
-        fontFamily: Variables.fonts.bold, // Bold font family
-        fontSize: Variables.textSizes.xl, // Large title size
-        color: Variables.colors.text, // Main text color
-        alignSelf: "center", // Center alignment in row
-    },
-    settingsIcon: {
-        // Settings icon positioning
-        position: "absolute", // Absolute positioning in header
-        right: -100, // Horizontal offset
-        transform: [{ translateY: -14 }], // Vertical shift
-    },
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+},
+headerTitle: {
+    fontFamily: Variables.fonts.bold,
+    fontSize: Variables.textSizes.xl,
+    color: Variables.colors.text,
+},
     profileSection: {
-        // Top profile section
-        alignItems: "center", // Center children horizontally
-        marginTop: 20, // Space from header
+        alignItems: "center",
+        marginTop: 20,
     },
     avatarContainer: {
-        // Avatar container style
-        position: "relative", // For positioning edit badge
+        position: "relative",
     },
     avatar: {
-        // Main avatar image
-        width: 90, // Avatar width
-        height: 90, // Avatar height
-        borderRadius: 45, // Circular shape
-        backgroundColor: "#E0E0E0", // Placeholder background
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        backgroundColor: "#E0E0E0",
     },
     editBadge: {
-        // Edit badge on avatar
-        position: "absolute", // Overlay on avatar
-        bottom: 0, // Anchor to bottom
-        right: 0, // Anchor to right
-        backgroundColor: Variables.colors.primary, // Badge background
-        width: 28, // Badge width
-        height: 28, // Badge height
-        borderRadius: 14, // Circular badge
-        justifyContent: "center", // Center icon horizontally
-        alignItems: "center", // Center icon vertically
-        borderWidth: 2, // Badge border thickness
-        borderColor: Variables.colors.background, // Badge border color
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        backgroundColor: Variables.colors.primary,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: Variables.colors.background,
     },
     nameText: {
-        // Display name text
-        fontFamily: Variables.fonts.bold, // Bold font
-        fontSize: 22, // Name size
-        marginTop: 15, // Space above name
-        color: Variables.colors.text, // Primary text color
+        fontFamily: Variables.fonts.bold,
+        fontSize: 22,
+        marginTop: 15,
+        color: Variables.colors.text,
     },
     levelPointsRow: {
-        // Level/points row
-        flexDirection: "row", // Horizontal layout
-        alignItems: "center", // Vertical alignment
-        marginTop: 5, // Space above row
-        gap: 25, // Gap between level and points
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 5,
+        gap: 25,
     },
     pointsGroup: {
-        // Points and diamond group
-        flexDirection: "row", // Horizontal layout
-        alignItems: "center", // Vertical alignment
-        gap: 4, // Small spacing
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
     },
     levelText: {
-        // Level label text
-        fontFamily: Variables.fonts.regular, // Regular font
-        fontSize: 16, // Level text size
-        color: Variables.colors.textLight, // Secondary text color
+        fontFamily: Variables.fonts.regular,
+        fontSize: 16,
+        color: Variables.colors.textLight,
     },
     pointsText: {
-        // Points number text
-        fontFamily: Variables.fonts.bold, // Bold font
-        fontSize: 18, // Points text size
-        color: Variables.colors.text, // Primary text color
+        fontFamily: Variables.fonts.bold,
+        fontSize: 18,
+        color: Variables.colors.text,
     },
     diamondIcon: {
-        // Diamond image style
-        width: 20, // Icon width
-        height: 20, // Icon height
-        resizeMode: "contain", // Keep aspect ratio
+        width: 20,
+        height: 20,
+        resizeMode: "contain",
     },
     statsContainer: {
-        // Stats cards row container
-        flexDirection: "row", // Horizontal layout
-        justifyContent: "space-between", // Distribute cards
-        paddingHorizontal: 20, // Horizontal padding
-        marginTop: 30, // Top spacing
-        gap: 15, // Gap between cards
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        marginTop: 30,
+        gap: 15,
     },
     statCard: {
-        // Individual stat card style
-        flex: 1, // Equal width cards
-        backgroundColor: "#FFFFFF", // Card background
-        borderRadius: 16, // Rounded corners
-        padding: 20, // Inner spacing
-        alignItems: "center", // Center card content
-        shadowColor: "#000", // Shadow color
-        shadowOffset: { width: 0, height: 2 }, // Shadow offset
-        shadowOpacity: 0.05, // Shadow opacity
-        shadowRadius: 5, // Shadow blur radius
-        elevation: 3, // Android elevation
+        flex: 1,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        padding: 20,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 3,
     },
     statCardTitle: {
-        // Stat card title style
-        fontFamily: Variables.fonts.regular, // Regular font
-        fontSize: 13, // Title size
-        color: Variables.colors.textLight, // Secondary color
-        textAlign: "center", // Center text
-        marginBottom: 10, // Space below title
+        fontFamily: Variables.fonts.regular,
+        fontSize: 13,
+        color: Variables.colors.textLight,
+        textAlign: "center",
+        marginBottom: 10,
     },
     statCardNumber: {
-        // Stat number style
-        fontFamily: Variables.fonts.bold, // Bold font
-        fontSize: 28, // Number size
-        color: Variables.colors.text, // Primary text color
+        fontFamily: Variables.fonts.bold,
+        fontSize: 28,
+        color: Variables.colors.text,
     },
     section: {
-        // Generic section wrapper
-        paddingHorizontal: 20, // Horizontal padding
-        marginTop: 35, // Top spacing
-        marginBottom: 10, // Bottom spacing
+        paddingHorizontal: 20,
+        marginTop: 35,
+        marginBottom: 10,
     },
     sectionTitle: {
-        // Generic section title
-        fontFamily: Variables.fonts.bold, // Bold font
-        fontSize: 20, // Title size
-        color: Variables.colors.text, // Primary text color
-        marginBottom: 15, // Space below title
+        fontFamily: Variables.fonts.bold,
+        fontSize: 20,
+        color: Variables.colors.text,
+        marginBottom: 15,
     },
 
-    // --- Progress bar styles ---
     levelBarWrapper: {
-        // Progress area wrapper
-        marginTop: 10, // Space from section title
+        marginTop: 10,
     },
     progressBarBackground: {
-        // Progress track style
-        width: "100%", // Full width
-        height: 18, // Track height
-        backgroundColor: "#E0E0E0", // Track color
-        borderRadius: 10, // Rounded track
-        position: "relative", // Anchor for inner elements
+        width: "100%",
+        height: 18,
+        backgroundColor: "#E0E0E0",
+        borderRadius: 10,
+        position: "relative",
     },
     progressBarFill: {
-        // Filled progress style
-        height: "100%", // Match track height
-        backgroundColor: Variables.colors.primary || "#1976D2", // Fill color
-        borderRadius: 10, // Rounded fill
-        position: "relative", // Anchor floating avatar
+        height: "100%",
+        backgroundColor: Variables.colors.primary || "#1976D2",
+        borderRadius: 10,
+        position: "relative",
     },
     progressAvatarWrapper: {
-        // Floating avatar container on fill edge
-        position: "absolute", // Absolute inside fill
-        right: -15, // Overhang to the right
-        top: -8, // Move above bar
-        width: 34, // Wrapper width
-        height: 34, // Wrapper height
-        borderRadius: 17, // Circular wrapper
-        backgroundColor: "#FFFFFF", // White background
-        justifyContent: "center", // Center image horizontally
-        alignItems: "center", // Center image vertically
-        // NEW: Blue border around avatar on progress bar
-        borderWidth: 2, // Border width
-        borderColor: Variables.colors.primary || "#1976D2", // Border color
-        shadowColor: "#000", // Shadow color
-        shadowOffset: { width: 0, height: 2 }, // Shadow offset
-        shadowOpacity: 0.2, // Shadow opacity
-        shadowRadius: 3, // Shadow blur
-        elevation: 4, // Android elevation
+        position: "absolute",
+        right: -15,
+        top: -8,
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: "#FFFFFF",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: Variables.colors.primary || "#1976D2",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
     },
 
     pointsNeededText: {
-        // Middle "points needed" pill style
-        fontFamily: Variables.fonts.semibold, // Semibold font
-        fontSize: 12, // Text size
-        // NEW: Blue text on light blue background
-        color: Variables.colors.primary || "#1976D2", // Text color
-        backgroundColor: "#E3F2FD", // Pill background
-        paddingHorizontal: 10, // Horizontal padding
-        paddingVertical: 3, // Vertical padding
-        borderRadius: 12, // Rounded corners
-        overflow: "hidden", // Clip rounded background
+        fontFamily: Variables.fonts.semibold,
+        fontSize: 12,
+        color: Variables.colors.primary || "#1976D2",
+        backgroundColor: "#E3F2FD",
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: 12,
+        overflow: "hidden",
     },
     progressAvatar: {
-        // Avatar image inside progress wrapper
-        width: 28, // Image width
-        height: 28, // Image height
-        borderRadius: 14, // Circular image
+        width: 28,
+        height: 28,
+        borderRadius: 14,
     },
     levelLabelsRow: {
-        // Labels row under progress bar
-        flexDirection: "row", // Horizontal layout
-        justifyContent: "space-between", // Spread labels
-        marginTop: 15, // Space above labels
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 15,
     },
     levelLabelText: {
-        // Level label text style
-        fontFamily: Variables.fonts.regular, // Regular font
-        fontSize: 12, // Label size
-        color: Variables.colors.textLight, // Secondary color
+        fontFamily: Variables.fonts.regular,
+        fontSize: 12,
+        color: Variables.colors.textLight,
     },
 
     reportCard: {
-        // Report item card style
-        flexDirection: "row", // Horizontal layout
-        alignItems: "center", // Vertical alignment
-        backgroundColor: "#FFFFFF", // Card background
-        borderRadius: 16, // Rounded corners
-        padding: 15, // Inner spacing
-        marginBottom: 12, // Space between cards
-        shadowColor: "#000", // Shadow color
-        shadowOffset: { width: 0, height: 2 }, // Shadow offset
-        shadowOpacity: 0.05, // Shadow opacity
-        shadowRadius: 5, // Shadow blur
-        elevation: 2, // Android elevation
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        padding: 15,
+        marginBottom: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
     },
     statusIconWrapper: {
-        // Circular status icon background
-        width: 50, // Wrapper width
-        height: 50, // Wrapper height
-        borderRadius: 25, // Circular shape
-        justifyContent: "center", // Center icon horizontally
-        alignItems: "center", // Center icon vertically
-        marginRight: 15, // Space before text area
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 15,
     },
     reportCardContent: {
-        // Main text content of report card
-        flex: 1, // Fill available row width
+        flex: 1,
     },
     reportDate: {
-        // Report date text
-        fontFamily: Variables.fonts.bold, // Bold font
-        fontSize: 15, // Date size
-        color: Variables.colors.text, // Primary text color
+        fontFamily: Variables.fonts.bold,
+        fontSize: 15,
+        color: Variables.colors.text,
     },
     reportAddress: {
-        // Report address/summary text
-        fontFamily: Variables.fonts.regular, // Regular font
-        fontSize: 13, // Text size
-        color: Variables.colors.textLight, // Secondary text color
-        lineHeight: 18, // Line spacing
+        fontFamily: Variables.fonts.regular,
+        fontSize: 13,
+        color: Variables.colors.textLight,
+        lineHeight: 18,
     },
     emptyText: {
-        // Empty state text
-        fontFamily: Variables.fonts.regular, // Regular font
-        color: Variables.colors.textLight, // Secondary color
-        textAlign: "center", // Center alignment
-        marginTop: 10, // Top spacing
+        fontFamily: Variables.fonts.regular,
+        color: Variables.colors.textLight,
+        textAlign: "center",
+        marginTop: 10,
     },
     sectionHeader: {
-        // Header row inside section
-        flexDirection: "row", // Horizontal layout
-        justifyContent: "space-between", // Title left, action right
-        alignItems: "center", // Vertical alignment
-        marginBottom: 15, // Space below header row
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 15,
     },
     viewAllText: {
-        // "View all" action style
-        fontFamily: Variables.fonts.bold, // Bold font
-        color: Variables.colors.primary, // Primary color
-        fontSize: 14, // Text size
-        marginBottom: 15, // Bottom spacing
+        fontFamily: Variables.fonts.bold,
+        color: Variables.colors.primary,
+        fontSize: 14,
+        marginBottom: 15,
     },
     reportHeaderRow: {
-        // Row containing date + status
-        flexDirection: "row", // Horizontal layout
-        justifyContent: "space-between", // Split date and badge
-        alignItems: "center", // Vertical alignment
-        marginBottom: 4, // Spacing below row
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4,
     },
     statusBadgeText: {
-        // Status badge text style
-        fontFamily: Variables.fonts.bold, // Bold font
-        fontSize: 13, // Badge text size
+        fontFamily: Variables.fonts.bold,
+        fontSize: 13,
     },
 });

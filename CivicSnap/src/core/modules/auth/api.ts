@@ -126,6 +126,33 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
+export const updatePassword = async (newPassword: string, oldPassword: string) => {
+  try {
+    const result = await API.auth.updatePassword(newPassword, oldPassword);
+    return result;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
+export const sendPasswordRecovery = async (email: string, resetUrl: string) => {
+  try {
+    const result = await API.auth.createRecovery(email, resetUrl);
+    return result;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+export const resetPasswordWithRecovery = async (userId: string, secret: string, newPassword: string) => {
+  try {
+
+    const result = await API.auth.updateRecovery(userId, secret, newPassword);
+    return result;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 export const logout = async () => {
   try {
     await API.auth.deleteSession('current');

@@ -1,110 +1,95 @@
-import React, { useEffect, useState } from "react"; // Import React and hooks
-import { View, StyleSheet, ScrollView, Text, Image } from "react-native"; // Import core React Native UI components
-import { SafeAreaView } from "react-native-safe-area-context"; // Import safe area wrapper for notches/status bars
-import { useRouter } from "expo-router"; // Import router hook for navigation
+import React, { useEffect, useState } from "react";
+import { View, StyleSheet, ScrollView, Text, Image } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
-// ---- Components ---- // Section header for imported components
-// --- Design --- // Design-related components
-import ThemedText from "@components/design/Typography/ThemedText"; // Custom themed text component
-// --- Functional --- // Functional/business components
-import { useAuthContext } from "@components/functional/Auth/authProvider"; // Auth context hook
-import LocationMap from "@components/functional/Map/LocationMap"; // Map component
-// ---- Custom Styles ---- // Style/theme imports
-import { Variables } from "@style/theme"; // Shared theme variables (colors, sizes, fonts)
+// ---- Components ----
+// --- Design ---
+import ThemedText from "@components/design/Typography/ThemedText";
+// --- Functional ---
+import { useAuthContext } from "@components/functional/Auth/authProvider";
+import LocationMap from "@components/functional/Map/LocationMap";
+// ---- Custom Styles ----
+import { Variables } from "@style/theme";
 
-import { useRealtime } from "@core/modules/realtimeProvider/RealtimeProvider"; // Realtime provider hook
-import { API } from "@core/networking/api"; // API client abstraction
+import { useRealtime } from "@core/modules/realtimeProvider/RealtimeProvider";
+import { API } from "@core/networking/api";
 
 export default function HomeScreen() {
-  const router = useRouter(); // Initialize router (currently unused, kept for future navigation)
-  const { profile } = useAuthContext(); // Get user profile from auth context
-  const { lastUpdate } = useRealtime(); // Get realtime update trigger value
+  const router = useRouter();
+  const { profile } = useAuthContext();
+  const { lastUpdate } = useRealtime();
 
-  const [points, setPoints] = useState(profile?.current_points || 0); // Local state for current points
-  const [currentLevel, setCurrentLevel] = useState(profile?.lifetime_points || 1); // Local state for current level
+  const [points, setPoints] = useState(profile?.current_points || 0);
+  const [currentLevel, setCurrentLevel] = useState(profile?.lifetime_points || 1);
 
-  const displayName = profile?.full_name?.split(" ")[0] || "User"; // Use first name or fallback to "User"
-  const avatarUrl = profile?.avatar_url; // Read avatar URL from profile
+  // Na de bestaande states:
+const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url);
+const [displayName, setDisplayName] = useState(profile?.full_name?.split(" ")[0] || "User");
 
   useEffect(() => {
-    // Update local values whenever profile changes
     if (profile) {
-      // Ensure profile exists
-      setPoints(profile.current_points || 0); // Sync current points from profile
-      setCurrentLevel(profile.lifetime_points || 1); // Sync current level from profile
+      setPoints(profile.current_points || 0);
+      setCurrentLevel(profile.lifetime_points || 1);
     }
-  }, [profile]); // Dependency: profile
+  }, [profile]);
 
   useEffect(() => {
-    // Fetch latest profile when realtime updates occur
-    if (!profile?.$id) return; // Stop if no profile ID is available
+    if (!profile?.$id) return;
 
     const fetchLatestProfile = async () => {
-      // Async function to fetch latest profile document
       try {
-        // Try fetching fresh profile data
         const data = await API.database.getDocument(
-          API.config.databaseId, // Database ID
-          API.config.profilesCollectionId, // Profiles collection ID
-          profile.$id // Current user profile document ID
+          API.config.databaseId,
+          API.config.profilesCollectionId,
+          profile.$id
         );
-        setPoints(data.current_points || 0); // Update points from latest backend data
-        setCurrentLevel(data.lifetime_points || 1); // Update level from latest backend data
+        setPoints(data.current_points || 0);
+        setCurrentLevel(data.lifetime_points || 1);
+        setAvatarUrl(data.avatar_url);
+        setDisplayName(data.full_name?.split(" ")[0] || "User");
       } catch (error) {
-        // Handle request errors
-        console.error("Error while realtime-updating profile:", error); // English error message
+        console.error("Error while realtime-updating profile:", error);
       }
     };
 
-    fetchLatestProfile(); // Execute profile refresh
-  }, [lastUpdate, profile?.$id]); // Dependencies: realtime tick and profile ID
+    fetchLatestProfile();
+  }, [lastUpdate, profile?.$id]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* Main safe area container */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Scrollable page content */}
         <View style={styles.headerRow}>
-          {/* Top row with profile and points */}
           <View style={styles.profileGroup}>
-            {/* Left section: avatar + greeting */}
             <Image
               source={
                 avatarUrl
-                  ? { uri: avatarUrl } // Use remote avatar if available
-                  : require("@assets/icons/User.png") // Fallback avatar icon
+                  ? { uri: avatarUrl }
+                  : require("@assets/icons/User.png")
               }
               style={styles.avatar}
             />
             <View>
-              {/* Text block next to avatar */}
               <ThemedText style={styles.greeting}>
-                {/* Greeting text */}
                 Hi, {displayName}
               </ThemedText>
 
               <Text style={styles.levelText}>Level {currentLevel}</Text>
-              {/* Level indicator */}
             </View>
           </View>
 
           <View style={styles.pointsGroup}>
-            {/* Right section: points + diamond icon */}
             <Text style={styles.pointsValue}>{points}</Text>
-            {/* Current points value */}
             <Image
               source={require("@assets/icons/Diamant.png")}
               style={{ width: 28, height: 28 }}
               resizeMode="contain"
             />
-            {/* Diamond icon */}
           </View>
         </View>
 
         <View style={styles.section}>
-          {/* Main content section */}
           <LocationMap />
-          {/* Map component */}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -113,74 +98,63 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    // Root screen container
-    flex: 1, // Fill full screen
-    backgroundColor: Variables.colors.background, // Screen background color
+    flex: 1,
+    backgroundColor: Variables.colors.background,
   },
   scrollContent: {
-    // ScrollView content wrapper
-    flexGrow: 1, // Allow content to grow and fill available height
-    padding: Variables.sizes.lg || 20, // Base padding
-    paddingBottom: 0, // Remove bottom padding
-    paddingHorizontal: Variables.sizes.lg || 20, // Horizontal padding
+    flexGrow: 1,
+    padding: Variables.sizes.lg || 20,
+    paddingBottom: 0,
+    paddingHorizontal: Variables.sizes.lg || 20,
   },
   header: {
-    // Legacy/unused header style
-    flexDirection: "row", // Horizontal layout
-    justifyContent: "space-between", // Space between left and right elements
-    alignItems: "flex-start", // Align to top
-    marginBottom: 30, // Space below header
-    marginTop: 10, // Space above header
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 30,
+    marginTop: 10,
   },
   headerRow: {
-    // Active header row style
-    flexDirection: "row", // Place children in a row
-    alignItems: "center", // Vertically center items
-    justifyContent: "space-between", // Push profile and points apart
-    width: "100%", // Full width row
-    marginBottom: 30, // Space below row
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 30,
   },
   profileGroup: {
-    // Profile info group (avatar + text)
-    flexDirection: "row", // Horizontal layout
-    alignItems: "center", // Vertically center content
-    gap: 12, // Spacing between avatar and text
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   avatar: {
-    // Avatar image style
-    width: 56, // Avatar width
-    height: 56, // Avatar height
-    borderRadius: 28, // Make avatar circular
-    backgroundColor: "#E0E0E0", // Placeholder background
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#E0E0E0",
   },
   greeting: {
-    // Greeting text style
-    fontFamily: Variables.fonts.bold || "bold", // Bold font
-    fontSize: Variables.textSizes.lg || 22, // Large text size
-    color: Variables.colors.text || "#000", // Primary text color
+    fontFamily: Variables.fonts.bold || "bold",
+    fontSize: Variables.textSizes.lg || 22,
+    color: Variables.colors.text || "#000",
   },
   levelText: {
-    // Level text style
-    fontSize: Variables.textSizes.md || 16, // Medium text size
-    color: Variables.colors.textLight || "#747373", // Secondary text color
-    marginTop: 2, // Small top spacing
+    fontSize: Variables.textSizes.md || 16,
+    color: Variables.colors.textLight || "#747373",
+    marginTop: 2,
   },
   pointsGroup: {
-    // Points display group
-    flexDirection: "row", // Horizontal layout for number and icon
-    alignItems: "center", // Vertical alignment
-    gap: 6, // Spacing between points and icon
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   pointsValue: {
-    // Points value text style
-    fontSize: Variables.textSizes.lg || 22, // Large text size
-    fontFamily: Variables.fonts.bold || "bold", // Bold font
-    color: Variables.colors.text || "#000", // Primary text color
+    fontSize: Variables.textSizes.lg || 22,
+    fontFamily: Variables.fonts.bold || "bold",
+    color: Variables.colors.text || "#000",
   },
   section: {
-    // Section wrapper for map/content
-    flex: 1, // Fill remaining space
-    marginTop: 0, // No top margin
-    marginHorizontal: -(Variables.sizes.lg || 20), // Extend content to screen edges
+    flex: 1,
+    marginTop: 0,
+    marginHorizontal: -(Variables.sizes.lg || 20),
   },
 });

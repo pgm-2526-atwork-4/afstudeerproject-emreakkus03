@@ -70,7 +70,6 @@ export default function AppLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="settings" options={{ headerShown: false,href: null, }} />
     </Tabs>
   );
 }

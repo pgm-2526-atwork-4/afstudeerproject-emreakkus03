@@ -1,32 +1,9 @@
-import { Client, Databases, Users, Permission, Role } from 'node-appwrite';
+import { Client, Databases, Permission, Role } from 'node-appwrite';
 
 export default async ({ req, res, log, error }) => {
     if (!req.bodyRaw) return res.send('Geen document data gevonden.');
 
     const payload = JSON.parse(req.bodyRaw);
-    const event = req.headers['x-appwrite-event'] || '';
-
-    const client = new Client()
-        .setEndpoint(process.env.APPWRITE_ENDPOINT)
-        .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-        .setKey(process.env.APPWRITE_API_KEY);
-
-    const databases = new Databases(client);
-    const users = new Users(client);
-
-    // --- Check of het een profile delete event is ---
-    if (event.includes('profiles') && event.includes('delete')) {
-        const deletedUserId = payload.$id;
-        try {
-            await users.delete(deletedUserId);
-            log(`Auth account ${deletedUserId} verwijderd`);
-        } catch (err) {
-            error(`Kon auth account niet verwijderen: ${err.message}`);
-        }
-        return res.empty();
-    }
-
-    // --- Originele report permissions logica ---
     const documentId = payload.$id;
     const orgId = payload.organization_id;
     const userId = payload.user_id;
@@ -36,11 +13,21 @@ export default async ({ req, res, log, error }) => {
         return res.json({ success: true });
     }
 
+    const client = new Client()
+        .setEndpoint(process.env.APPWRITE_ENDPOINT)
+        .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
+        .setKey(process.env.APPWRITE_API_KEY);
+
+    const databases = new Databases(client);
+
     try {
         const newPermissions = [
+            // Burger mag zijn eigen melding beheren
             Permission.read(Role.user(userId)),
             Permission.update(Role.user(userId)),
             Permission.delete(Role.user(userId)),
+            
+            // Ambtenaren Team rechten
             Permission.read(Role.team(orgId)),
             Permission.update(Role.team(orgId, 'org_admin')),
             Permission.update(Role.team(orgId, 'org_officer')),
@@ -51,15 +38,15 @@ export default async ({ req, res, log, error }) => {
             process.env.DATABASE_ID,
             process.env.REPORTS_COLLECTION_ID,
             documentId,
-            {},
+            {}, 
             newPermissions
         );
 
-        log(`Rechten succesvol vastgezet voor melding: ${documentId}`);
+        log(`🎉 Rechten succesvol vastgezet voor melding: ${documentId}`);
         return res.json({ success: true });
 
     } catch (err) {
-        error(`Fout: ${err.message}`);
+        error(`❌ Fout: ${err.message}`);
         return res.json({ success: false, error: err.message });
     }
 };

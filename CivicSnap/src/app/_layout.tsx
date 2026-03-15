@@ -44,6 +44,7 @@ if (!isInitialized) {
       <Stack.Screen name="welcome" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="reset-password" />
       <Stack.Screen name="(app)" />
     </Stack>
   );

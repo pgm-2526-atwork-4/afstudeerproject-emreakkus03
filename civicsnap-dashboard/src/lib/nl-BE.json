@@ -355,6 +355,9 @@
       "fetchUserError": "Fout bij het ophalen van gebruikersgegevens",
       "fetchOrgError": "Fout bij het ophalen van organisatieleden",
       "fetchOrgDetailsError": "Fout bij het ophalen van organisatiegegevens"
+    },
+    "resetPassword": {
+      "redirecting": "Je wordt doorgestuurd naar de CivicSnap app..."
     }
   }
 }

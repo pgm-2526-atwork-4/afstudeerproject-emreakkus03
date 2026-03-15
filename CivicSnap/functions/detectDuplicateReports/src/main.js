@@ -2,39 +2,32 @@ import { Client, Databases, Query } from 'node-appwrite';
 
 // Mathematical formula to calculate distance in meters between 2 GPS coordinates
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371e3;
+  const R = 6371e3; // Radius of the Earth in meters
   const p = Math.PI / 180;
   const a = 0.5 - Math.cos((lat2 - lat1) * p) / 2 + 
         Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p)) / 2;
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
-// Helper function to check how many labels two arrays have in common
+// Helper functie om te kijken hoeveel woorden twee lijsten gemeen hebben
 function calculateLabelOverlap(labels1, labels2) {
   if (!labels1 || !labels2 || !Array.isArray(labels1) || !Array.isArray(labels2)) return 0;
+  // Maak een set voor snelle vergelijking
   const set2 = new Set(labels2);
+  // Filter de woorden uit array 1 die ook in array 2 staan
   const intersection = labels1.filter(label => set2.has(label));
   return intersection.length;
 }
 
-// XP formula: 100 + floor(totalReports/20)²
-// 1st report  → 100 XP
-// 20th report → 101 XP
-// 40th report → 104 XP
-// 100th report → 125 XP
-// 200th report → 200 XP
-function calculateXP(totalReports) {
-  const multiplier = Math.floor(totalReports / 20);
-  return 100 + (multiplier * multiplier);
-}
-
 export default async ({ req, res, log, error }) => {
+  // Check if the function was triggered by a database event
   if (!req.body) {
     return res.send("Function called directly, no database payload found.");
   }
 
   const newReport = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   
+  // If this report already has an original_id, stop (prevents infinite loops)
   if (newReport.original_report_id) {
     return res.json({ success: true, message: "Report is already linked." });
   }
@@ -48,12 +41,11 @@ export default async ({ req, res, log, error }) => {
 
   const databaseId = process.env.DATABASE_ID;
   const collectionId = process.env.REPORTS_COLLECTION_ID;
-  const profilesCollectionId = process.env.PROFILES_COLLECTION_ID;
 
   try {
     log(`Searching for duplicates for report ${newReport.$id} in category ${newReport.category_id}`);
 
-    // 1. Search for other active reports with the exact same category and organization
+    // 1. Search for other active reports with the EXACT same category and organization
     const existingReports = await databases.listDocuments(
       databaseId,
       collectionId,
@@ -61,8 +53,8 @@ export default async ({ req, res, log, error }) => {
         Query.equal('organization_id', newReport.organization_id),
         Query.equal('category_id', newReport.category_id),
         Query.equal('status', ['new', 'approved', 'in_progress']),
-        Query.notEqual('$id', newReport.$id),
-        Query.isNull('original_report_id')
+        Query.notEqual('$id', newReport.$id), // Ignore itself
+        Query.isNull('original_report_id')    // Compare only with "main" reports
       ]
     );
 
@@ -79,30 +71,37 @@ export default async ({ req, res, log, error }) => {
 
       log(`Distance to ${report.$id}: ${Math.round(distance)} meters`);
 
+      // 3. De 50-meter check is gehaald
       if (distance <= 50) {
+        
         const newLabels = newReport.vision_labels || [];
         const oldLabels = report.vision_labels || [];
 
+        // BEIDE meldingen hebben foto-labels (We gaan slim checken!)
         if (newLabels.length > 0 && oldLabels.length > 0) {
           const sharedWordsCount = calculateLabelOverlap(newLabels, oldLabels);
           log(`Shared AI labels with ${report.$id}: ${sharedWordsCount} words`);
 
+          // Ze moeten minstens 2 dezelfde labels hebben (bijv: "couch" & "furniture")
           if (sharedWordsCount >= 2) {
              foundOriginalId = report.$id;
              log(`AI MATCH! Original ID becomes: ${foundOriginalId}`);
-             break;
+             break; // Stop met zoeken, we hebben hem!
           } else {
-             log(`No AI match. These are different objects in the same area.`);
+             log(`No AI Match. These are different objects in the same area.`);
+             // We doen hier expres GEEN break. Misschien ligt de échte duplicate wel verderop in de lijst!
           }
-        } else {
+        } 
+        // Eén van de twee (of allebei) heeft GEEN foto. We vertrouwen alleen op GPS.
+        else {
           foundOriginalId = report.$id;
           log(`GPS MATCH (No AI data available). Original ID becomes: ${foundOriginalId}`);
-          break;
+          break; // Stop met zoeken
         }
       }
     }
 
-    // 3. If we found a match, update the new report as duplicate
+    // 4. If we found a match, update the NEW report with the ID of the OLD report
     if (foundOriginalId) {
       await databases.updateDocument(
         databaseId,
@@ -113,60 +112,13 @@ export default async ({ req, res, log, error }) => {
           is_duplicate: true
         }
       );
-      log(`Duplicate linked to ${foundOriginalId}. Skipping XP award.`);
       return res.json({ success: true, message: `Duplicate successfully linked to ${foundOriginalId}` });
     }
 
-    // --- XP LOGIC (only if it's NOT a duplicate) ---
-    const userId = newReport.user_id;
-
-    if (!userId || !profilesCollectionId) {
-      log('No user_id or profilesCollectionId found, XP skipped.');
-      return res.json({ success: true, message: "No duplicates found. XP skipped." });
-    }
-
-    // Count how many reports this user has in total (including this new one)
-    const userReportsResponse = await databases.listDocuments(
-      databaseId,
-      collectionId,
-      [
-        Query.equal('user_id', userId),
-        Query.limit(1000)
-      ]
-    );
-    const totalReports = userReportsResponse.total;
-    log(`User ${userId} has ${totalReports} reports in total`);
-
-    // Calculate XP based on total number of reports
-    const xpToAward = calculateXP(totalReports);
-    log(`XP to award: ${xpToAward}`);
-
-    // Fetch the current profile
-    const profile = await databases.getDocument(
-      databaseId,
-      profilesCollectionId,
-      userId
-    );
-
-    const currentLifetimePoints = profile.lifetime_points || 0;
-    const newLifetimePoints = currentLifetimePoints + xpToAward;
-
-    // Update lifetime_points in the profile
-    await databases.updateDocument(
-      databaseId,
-      profilesCollectionId,
-      userId,
-      {
-        lifetime_points: newLifetimePoints,
-      }
-    );
-
-    log(`XP updated for user ${userId}: ${currentLifetimePoints} → ${newLifetimePoints}`);
-
-    return res.json({ success: true, message: `No duplicates found. ${xpToAward} XP awarded.` });
+    return res.json({ success: true, message: "No duplicates found. This is a unique report." });
 
   } catch (err) {
-    error(`Error during duplicate check or XP award: ${err.message}`);
+    error(`Error during duplicate check: ${err.message}`);
     return res.json({ success: false, error: err.message });
   }
 };

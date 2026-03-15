@@ -36,7 +36,7 @@ export const RealtimeProvider = ({
       if (appStateRef.current === "active") {
         setLastUpdate(Date.now());
       }
-    }, 10000);
+    }, 5000);
 
     const subscription = AppState.addEventListener(
       "change",
