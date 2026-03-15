@@ -3,6 +3,8 @@ import { Image } from "react-native";
 import { Marker } from "react-native-maps";
 import { Query } from "react-native-appwrite";
 
+import { View } from "react-native";
+
 import { API } from "@core/networking/api";
 import { useRealtime } from "@core/modules/realtimeProvider/RealtimeProvider";
 
@@ -79,13 +81,9 @@ export default function ReportMarkers({location_lat, location_long, onReportPres
           }}
           title={report.category_name || "Melding"}
           description={report.address || "Adres onbekend"}
-          onPress={() => onReportPress && onReportPress(report)}
+          onPress={(e) =>{e.stopPropagation(); onReportPress && onReportPress(report);} }
+          image={require("@assets/icons/ReportPinMarker.png")}
         >
-          
-          <Image
-            source={require("@assets/icons/ReportPinMarker.png")} 
-            style={{ width: 40, height: 40,  resizeMode: "contain" }} 
-          />
         </Marker>
       ))}
     </>

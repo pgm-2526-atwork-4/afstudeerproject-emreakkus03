@@ -19,6 +19,8 @@ import * as ImagePicker from "expo-image-picker";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Ionicons } from "@expo/vector-icons";
+
 //--- Components ---
 import ReportPopupScreen from "@components/functional/Report/ReportPopupScreen";
 import AnnouncementBanner from "@components/functional/Announcements/AnnouncementBanner";
@@ -34,9 +36,18 @@ export default function LocationMap() {
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
   );
+
+  const [targetLocation, setTargetLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportPopupVisible, setReportPopupVisible] = useState(false);
+
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [hasPanned, setHasPanned] = useState(false);
+
   const router = useRouter();
 
   const mapRef = React.useRef<MapView>(null);
@@ -79,6 +90,10 @@ export default function LocationMap() {
         ])) as Location.LocationObject;
 
         setLocation(currentLocation);
+        setTargetLocation({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+        });
 
         mapRef.current?.animateToRegion(
           {
@@ -106,7 +121,7 @@ export default function LocationMap() {
   }, []);
 
   const handleAddNote = async (photoUri?: string) => {
-    if (!location) {
+    if (!targetLocation) {
       alert("We couldn't get your location. Please try again.");
       return;
     }
@@ -121,7 +136,7 @@ export default function LocationMap() {
 
       if (APIKey) {
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.coords.latitude},${location.coords.longitude}&key=${APIKey}`,
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${targetLocation.latitude},${targetLocation.longitude}&key=${APIKey}`,
         );
         const data = await response.json();
 
@@ -151,8 +166,8 @@ export default function LocationMap() {
     router.push({
       pathname: "/(app)/report/create" as any,
       params: {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: targetLocation?.latitude,
+        longitude: targetLocation?.longitude,
         address,
         city,
         zipcode,
@@ -201,6 +216,18 @@ export default function LocationMap() {
     }
   };
 
+  const goToMyLocation = () => {
+    if (location) {
+      mapRef.current?.animateToRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+      setHasPanned(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {location && (
@@ -212,6 +239,7 @@ export default function LocationMap() {
       <MapView
         ref={mapRef}
         style={styles.map}
+        userInterfaceStyle="light"
         provider={
           Platform.OS === "android" ? PROVIDER_GOOGLE : PROVIDER_DEFAULT
         }
@@ -219,45 +247,121 @@ export default function LocationMap() {
         showsUserLocation={true}
         showsMyLocationButton={true}
         toolbarEnabled={false}
+        onPress={() => setSelectedReport(null)}
         mapPadding={{
           top: 20,
           right: 0,
           bottom: 0,
           left: 0,
         }}
+
+        onPanDrag={() => setHasPanned(true)}
+       onRegionChange={(region, details) => {
+          // isGesture is TRUE als een menselijke vinger de kaart vastpakt
+          if (details?.isGesture) {
+            setHasPanned(true);
+          }
+        }}
+        onRegionChangeComplete={(region, details) => {
+          setTargetLocation({
+            latitude: region.latitude,
+            longitude: region.longitude,
+          });
+
+          if (details && details.isGesture === false) {
+            setHasPanned(false);
+          }
+        }}
       >
-        {location && (
-          <Marker
-            coordinate={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            }}
-            title="Uw huidige locatie"
-          >
-            <Image
-              source={require("@assets/icons/Indicator.png")}
-              style={styles.markerImage}
-            />
-          </Marker>
-        )}
         {location && (
           <ReportMarkers 
             location_lat={location.coords.latitude} 
             location_long={location.coords.longitude} 
-            onReportPress={(report) => console.log("Geklikt op melding:", report.$id)} // Optioneel
+           onReportPress={(report) => setSelectedReport(report)}
           />
         )}
       </MapView>
+      {Platform.OS === "ios" && (
       <TouchableOpacity
-        style={[styles.plus, { bottom: insets.bottom + 0 }]}
-        onPress={() => setReportPopupVisible(true)}
-        activeOpacity={0.8}
+        style={[styles.locationButton, {  top: insets.top + 10 }]}
+        onPress={goToMyLocation}
       >
-        <Image
-          source={require("@assets/icons/Plus-Circle.png")}
-          style={styles.plusImage}
-        />
+        <Ionicons name="locate" size={24} color={Variables.colors.primary} />
       </TouchableOpacity>
+      )}
+      {hasPanned && (
+      <View style={styles.centerPinContainer} pointerEvents="none">
+        <Image 
+          
+          source={require("@assets/icons/Indicator.png")} 
+          style={styles.centerPinImage} 
+        />
+      </View>
+      )}
+      {!selectedReport && (
+        <TouchableOpacity
+          style={[styles.plus, { bottom: insets.bottom + 0 }]}
+          onPress={() => setReportPopupVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={require("@assets/icons/Plus-Circle.png")}
+            style={styles.plusImage}
+          />
+        </TouchableOpacity>
+      )}
+
+      {/* NIEUW: De Bottom Sheet die verschijnt bij een klik op een pin */}
+      {/* De Bottom Sheet die verschijnt bij een klik op een pin */}
+      {selectedReport && (
+        <View style={[styles.bottomSheet, { paddingBottom: insets.bottom }]}>
+          
+          <View style={styles.sheetHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetCategory}>
+                {selectedReport.category_name || "Algemene Melding"}
+              </Text>
+              <Text style={styles.sheetStatus}>
+                {selectedReport.status === "new" ? "Nieuw" : 
+                 selectedReport.status === "in_progress" ? "In behandeling" : 
+                 selectedReport.status === "approved" ? "Goedgekeurd" : selectedReport.status}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setSelectedReport(null)} 
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color={Variables.colors.textLight} />
+            </TouchableOpacity>
+          </View>
+
+          {/* NIEUW: Toon de foto als deze bestaat (Check of de naam in je DB photo_url of image_url is!) */}
+          {selectedReport.photo_url && (
+            <Image 
+              source={{ uri: selectedReport.photo_url }} 
+              style={styles.sheetImage} 
+            />
+          )}
+
+         
+          <View style={styles.addressRow}>
+            <Image 
+              source={require("@assets/icons/ReportPinMarker.png")} 
+              style={styles.addressIcon} 
+            />
+            <Text style={styles.sheetAddress}>
+              {selectedReport.address || "Adres onbekend"}
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.detailButton}
+            onPress={() => router.push(`/(app)/report/${selectedReport.$id}` as any)}
+          >
+            <Text style={styles.detailButtonText}>Bekijk volledige details</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ReportPopupScreen
         visible={reportPopupVisible}
@@ -370,4 +474,114 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   gdprText: { color: "white", fontSize: 12 },
+
+  bottomSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Variables.colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 24,
+    paddingHorizontal: 20,
+    shadowColor: Variables.colors.text,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 20, 
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  sheetCategory: {
+    fontSize: Variables.textSizes.lg,
+    fontFamily: Variables.fonts.bold,
+    color: Variables.colors.text,
+    marginBottom: 4,
+  },
+  sheetStatus: {
+    fontSize: Variables.textSizes.sm,
+    fontFamily: Variables.fonts.bold,
+    color: Variables.colors.primary, 
+    textTransform: "uppercase",
+  },
+  closeButton: {
+    padding: 4,
+    backgroundColor: Variables.colors.background,
+    borderRadius: 20,
+  },
+  sheetAddress: {
+    fontSize: Variables.textSizes.base,
+    fontFamily: Variables.fonts.bold,
+    color: Variables.colors.textLight,
+  },
+  detailButton: {
+    backgroundColor: Variables.colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  detailButtonText: {
+    color: Variables.colors.textInverse,
+    fontSize: Variables.textSizes.base,
+    fontFamily: Variables.fonts.bold,
+  },
+  sheetImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: "#E0E0E0",
+    resizeMode: "cover",
+  },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  addressIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+    resizeMode: "contain",
+  },
+  centerPinContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    // Dit zorgt ervoor dat niet de linkerbovenhoek, maar de PUNT van de pin in het exacte midden staat.
+    // Pas deze getallen aan afhankelijk van de grootte van je afbeelding.
+    marginLeft: -25, // Helft van de width
+    marginTop: -50,  // Volledige height (zodat de onderkant van de pin in het midden prikt)
+    zIndex: 10,
+  },
+  centerPinImage: {
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
+    // Optioneel: voeg een subtiele schaduw toe voor een 3D effect
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  locationButton: {
+    position: "absolute",
+    right: 15,
+    backgroundColor: Variables.colors.surface, // Witte achtergrond
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 5,
+  },
 });

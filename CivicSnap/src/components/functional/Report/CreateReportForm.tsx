@@ -265,16 +265,16 @@ export default function CreateReportForm({
   };
 
   const handleSubmit = async () => {
-    if (!description) {
-      Alert.alert("Error", "Please enter a short description.");
+    if (!localPhotoUri && description.trim() === "") {
+      Alert.alert("Oeps!", "Vul een korte beschrijving van het probleem in.");
       return;
     }
-    if (!user) {
-      Alert.alert("Error", "You must be logged in to create a report.");
+   if (!user) {
+      Alert.alert("Fout", "Je moet ingelogd zijn om een melding te maken.");
       return;
     }
     if (!selectedCategory) {
-      Alert.alert("Error", "Please select a category.");
+      Alert.alert("Fout", "Selecteer een categorie.");
       return;
     }
     setLoading(true);
@@ -329,11 +329,18 @@ export default function CreateReportForm({
           matchedOrgId = findOrg.$id;
 
         } else {
-          console.log("No matching organization found for zipcode:", currentZipcode);
+          Alert.alert(
+            "Dit gemeente wordt nog niet ondersteund",
+            `Helaas werkt ${currentCity || "deze gemeente"} nog niet samen met CivicSnap. Je kunt hier nog geen melding maken.`
+          );
+          setLoading(false);
+          return;
         }
       } catch(orgError) {
         console.error("Error fetching organizations:", orgError);
-
+        Alert.alert("Fout", "Kon de gemeente-gegevens niet ophalen. Probeer het later opnieuw.");
+        setLoading(false);
+        return;
       }
       
 

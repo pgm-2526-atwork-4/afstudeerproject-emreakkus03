@@ -9,10 +9,12 @@ import { AppState, AppStateStatus } from "react-native";
 
 interface RealtimeContextType {
   lastUpdate: number;
+  triggerUpdate: () => void;
 }
 
 const RealtimeContext = createContext<RealtimeContextType>({
   lastUpdate: Date.now(),
+  triggerUpdate: () => {},
 });
 
 export const RealtimeProvider = ({
@@ -22,6 +24,11 @@ export const RealtimeProvider = ({
 }) => {
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const appStateRef = useRef<AppStateStatus>("active");
+
+  const triggerUpdate = () => {
+    console.log("🔄 Handmatige refresh getriggerd...");
+    setLastUpdate(Date.now());
+  };
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -36,7 +43,7 @@ export const RealtimeProvider = ({
       (nextAppState: AppStateStatus) => {
         if (nextAppState === "active") {
           console.log("📱 App back in focus! Refreshing immediately...");
-          setLastUpdate(Date.now());
+          triggerUpdate();
         }
         appStateRef.current = nextAppState;
       },
@@ -49,7 +56,7 @@ export const RealtimeProvider = ({
   }, []);
 
   return (
-    <RealtimeContext.Provider value={{ lastUpdate }}>
+    <RealtimeContext.Provider value={{ lastUpdate, triggerUpdate}}>
       {children}
     </RealtimeContext.Provider>
   );
