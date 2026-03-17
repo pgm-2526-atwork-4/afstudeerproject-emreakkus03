@@ -2,17 +2,19 @@ import { Client, Account, Databases, Storage, Avatars } from 'react-native-appwr
 
 
 const CONFIG = {
-    endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1',
+    endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT || '',
     projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID || '',
     bundleId: process.env.EXPO_PUBLIC_APP_BUNDLE_ID || '',
-    databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID || 'CivicSnapDB',
-    storageBucketId: process.env.EXPO_PUBLIC_APPWRITE_BUCKET_ID || 'avatars',
-    profilesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID|| 'profiles',
-    categoriesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CATEGORIES_COLLECTION_ID || 'categories',
-    reportsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_REPORTS_COLLECTION_ID || 'reports',
+    databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID || '',
+    storageBucketId: process.env.EXPO_PUBLIC_APPWRITE_BUCKET_ID || '',
+    profilesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID|| '',
+    categoriesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CATEGORIES_COLLECTION_ID || '',
+    reportsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_REPORTS_COLLECTION_ID || '',
     google_maps_api_key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    organizationsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ORGANIZATIONS_COLLECTION_ID || 'organizations',
-    announcementsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ANNOUNCEMENTS_COLLECTION_ID || 'announcements',
+    organizationsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ORGANIZATIONS_COLLECTION_ID || '',
+    announcementsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ANNOUNCEMENTS_COLLECTION_ID || '',
+    rewardsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_REWARDS_COLLECTION_ID || '',
+    userRewardsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_USER_REWARDS_COLLECTION_ID || '',
 };
 
 
@@ -33,8 +35,9 @@ export const API = {
     
     
     config: {
-
+        
         databaseId: CONFIG.databaseId, 
+        projectId: CONFIG.projectId,
         storageBucketId: CONFIG.storageBucketId,
         profilesCollectionId: CONFIG.profilesCollectionId,
         categoriesCollectionId: CONFIG.categoriesCollectionId,
@@ -42,5 +45,7 @@ export const API = {
         organizationsCollectionId: CONFIG.organizationsCollectionId,
         announcementsCollectionId: CONFIG.announcementsCollectionId,
         googleMapsApiKey: CONFIG.google_maps_api_key,
+        rewardsCollectionId: CONFIG.rewardsCollectionId,
+        userRewardsCollectionId: CONFIG.userRewardsCollectionId,
     }
 };

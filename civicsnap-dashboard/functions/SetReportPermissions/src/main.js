@@ -1,10 +1,20 @@
-import { Client, Databases, Users, Permission, Role } from 'node-appwrite';
+import { Client, Databases, Users, Permission, Role, ID, Query } from 'node-appwrite';
 
 export default async ({ req, res, log, error }) => {
-    if (!req.bodyRaw) return res.send('Geen document data gevonden.');
 
-    const payload = JSON.parse(req.bodyRaw);
-    const event = req.headers['x-appwrite-event'] || '';
+const event = req.headers['x-appwrite-event'] || '';
+let payload = {};
+try {
+    if (req.body) {
+        payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        if (payload.data) {
+            payload = typeof payload.data === 'string' ? JSON.parse(payload.data) : payload.data;
+        }
+    }
+} catch (e) {
+    error(`Failed to parse request body: ${e.message}`);
+    return res.json({ success: false, error: 'Invalid request body' });
+}
 
     const client = new Client()
         .setEndpoint(process.env.APPWRITE_ENDPOINT)
@@ -14,33 +24,135 @@ export default async ({ req, res, log, error }) => {
     const databases = new Databases(client);
     const users = new Users(client);
 
-    // --- Check of het een profile delete event is ---
+    // --- 1. REWARD PURCHASE (HTTP call, no database event) ---
+    if (!event) {
+        const { userId, rewardId } = payload;
+
+        if (!userId || !rewardId) {
+            return res.json({ success: false, error: 'userId and rewardId are required.' });
+        }
+
+        try {
+            // Fetch the reward document
+            const reward = await databases.getDocument(
+                process.env.DATABASE_ID,
+                process.env.REWARDS_COLLECTION_ID,
+                rewardId
+            );
+
+            // Check if reward is active
+            if (!reward.is_active) {
+                return res.json({ success: false, error: 'This reward is no longer available.' });
+            }
+
+            // Check if reward is still valid
+            if (reward.valid_until && new Date(reward.valid_until) < new Date()) {
+                // Set reward to inactive
+                await databases.updateDocument(
+                    process.env.DATABASE_ID,
+                    process.env.REWARDS_COLLECTION_ID,
+                    rewardId,
+                    { is_active: false }
+                );
+                return res.json({ success: false, error: 'This reward has expired.' });
+            }
+
+            // Fetch the user profile
+            const profile = await databases.getDocument(
+                process.env.DATABASE_ID,
+                process.env.PROFILES_COLLECTION_ID,
+                userId
+            );
+
+            // Check if user has enough diamonds
+            if (profile.current_points < reward.cost_points) {
+                return res.json({ success: false, error: 'Insufficient diamonds.' });
+            }
+
+            // Check if user already owns this reward
+            const existingReward = await databases.listDocuments(
+                process.env.DATABASE_ID,
+                process.env.USER_REWARDS_COLLECTION_ID,
+                [
+                    Query.equal('user_id', userId),
+                    Query.equal('reward_id', rewardId),
+                ]
+            );
+
+            if (existingReward.total > 0) {
+                return res.json({ success: false, error: 'You already own this reward.' });
+            }
+
+            // Generate unique redemption code
+            const code = `CS-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+            // Deduct diamonds from user profile
+            await databases.updateDocument(
+                process.env.DATABASE_ID,
+                process.env.PROFILES_COLLECTION_ID,
+                userId,
+                {
+                    current_points: profile.current_points - reward.cost_points
+                }
+            );
+
+            // Create user_rewards document
+            await databases.createDocument(
+    process.env.DATABASE_ID,
+    process.env.USER_REWARDS_COLLECTION_ID,
+    ID.unique(),
+    {
+        user_id: userId,
+        reward_id: rewardId,
+        code: code,
+        status: 'active',
+        redeemed_at: null,
+    },
+    [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+    ]
+);
+
+            log(`Reward ${rewardId} purchased by user ${userId} for ${reward.cost_points} diamonds`);
+            return res.json({ success: true, code: code, pointsLeft: profile.current_points - reward.cost_points });
+
+        } catch (err) {
+            error(`Error during reward purchase: ${err.message}`);
+            return res.json({ success: false, error: err.message });
+        }
+    }
+
+    // --- 2. PROFILE DELETE EVENT ---
     if (event.includes('profiles') && event.includes('delete')) {
         const deletedUserId = payload.$id;
         try {
             await users.delete(deletedUserId);
-            log(`Auth account ${deletedUserId} verwijderd`);
+            log(`Auth account ${deletedUserId} deleted`);
         } catch (err) {
-            error(`Kon auth account niet verwijderen: ${err.message}`);
+            error(`Could not delete auth account: ${err.message}`);
         }
         return res.empty();
     }
 
-    // --- Originele report permissions logica ---
+    // --- 3. ORIGINAL REPORT PERMISSIONS LOGIC ---
     const documentId = payload.$id;
     const orgId = payload.organization_id;
     const userId = payload.user_id;
 
     if (!orgId || !userId) {
-        log('Geen organization_id of user_id gevonden, we slaan deze over.');
+        log('No organization_id or user_id found, skipping.');
         return res.json({ success: true });
     }
 
     try {
         const newPermissions = [
+            // Citizen can manage their own report
             Permission.read(Role.user(userId)),
             Permission.update(Role.user(userId)),
             Permission.delete(Role.user(userId)),
+
+            // Organization team permissions
             Permission.read(Role.team(orgId)),
             Permission.update(Role.team(orgId, 'org_admin')),
             Permission.update(Role.team(orgId, 'org_officer')),
@@ -55,11 +167,11 @@ export default async ({ req, res, log, error }) => {
             newPermissions
         );
 
-        log(`Rechten succesvol vastgezet voor melding: ${documentId}`);
+        log(`Permissions successfully set for report: ${documentId}`);
         return res.json({ success: true });
 
     } catch (err) {
-        error(`Fout: ${err.message}`);
+        error(`Error: ${err.message}`);
         return res.json({ success: false, error: err.message });
     }
 };
