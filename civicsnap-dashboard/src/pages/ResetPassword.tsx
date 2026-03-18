@@ -14,7 +14,7 @@ export default function ResetPassword() {
             const deepLink = `civicsnap://reset-password?userId=${userId}&secret=${secret}`;
             window.location.href = deepLink;
         }
-    }, []);
+    }, [searchParams]);
 
     return (
         <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>

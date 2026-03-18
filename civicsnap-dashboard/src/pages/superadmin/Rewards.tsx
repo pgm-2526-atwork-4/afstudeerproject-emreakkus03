@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { databases, appwriteConfig, storage } from "@core/appwrite";
 import { ID, Models } from "appwrite";
 import { Plus, Edit, Trash2, X } from "lucide-react";
@@ -43,7 +43,7 @@ export default function Rewards() {
     const [imagePreview, setImagePreview] = useState<string>("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchRewards = async () => {
+    const fetchRewards = useCallback(async () => {
         setLoading(true);
         try {
             const response = await databases.listDocuments(
@@ -71,11 +71,11 @@ export default function Rewards() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
 
     useEffect(() => {
-        fetchRewards();
-    }, []);
+        fetchRewards();
+    }, [fetchRewards]);
 
     const handleOpenCreate = () => {
         setForm(emptyForm);
