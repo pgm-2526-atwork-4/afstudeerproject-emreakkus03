@@ -292,7 +292,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     forgotPasswordContainer: {
-        alignSelf: "flex-end",
         marginTop: Variables.sizes.sm,
     },
     forgotPasswordText: {
