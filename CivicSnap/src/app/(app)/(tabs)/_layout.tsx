@@ -3,7 +3,7 @@ import { Image } from "react-native";
 
 export default function AppLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarStyle: {borderTopWidth: 1, borderColor: "#747373"} }}>
+    <Tabs screenOptions={{ headerShown: false, tabBarStyle: {borderTopWidth: 1} }}>
       <Tabs.Screen
         name="shop"
         options={{

@@ -1,0 +1,176 @@
+import React from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Variables } from "@style/theme";
+
+const LOCATION_LABELS: Record<string, string> = {
+  all: "Alle",
+  antwerp: "Antwerpen",
+  ghent: "Gent",
+  brussels: "Brussel",
+  bruges: "Brugge",
+  hasselt: "Hasselt",
+  courtrai: "Kortrijk",
+  namur: "Namen",
+  liege: "Luik",
+  charleroi: "Charleroi",
+};
+
+interface FilterBarProps {
+  selectedFilter: string;
+  selectedLocation: string;
+  showLocationDropdown: boolean;
+  filters: { key: string; label: string }[];
+  locations: { key: string; label: string }[];
+  onFilterChange: (key: string) => void;
+  onLocationChange: (key: string) => void;
+  onDropdownToggle: () => void;
+}
+
+export default function FilterBar({
+  selectedFilter,
+  selectedLocation,
+  showLocationDropdown,
+  filters,
+  locations,
+  onFilterChange,
+  onLocationChange,
+  onDropdownToggle,
+}: FilterBarProps) {
+  return (
+    <>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersContent}
+        style={styles.filtersScroll}
+      >
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            selectedFilter === "all" && selectedLocation === "all" && styles.filterChipActive,
+          ]}
+          onPress={() => { onFilterChange("all"); onLocationChange("all"); }}
+        >
+          <Text style={[styles.filterChipText, selectedFilter === "all" && selectedLocation === "all" && styles.filterChipTextActive]}>
+            Alles
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterChip, styles.locationChip, selectedLocation !== "all" && styles.filterChipActive]}
+          onPress={onDropdownToggle}
+        >
+          <Text style={[styles.filterChipText, selectedLocation !== "all" && styles.filterChipTextActive]}>
+            {selectedLocation === "all" ? "Stad" : LOCATION_LABELS[selectedLocation]}
+          </Text>
+          <Ionicons
+            name={showLocationDropdown ? "chevron-up" : "chevron-down"}
+            size={12}
+            color={selectedLocation !== "all" ? Variables.colors.textInverse : Variables.colors.textLight}
+          />
+        </TouchableOpacity>
+
+        {filters.filter((f) => f.key !== "all").map((filter) => (
+          <TouchableOpacity
+            key={filter.key}
+            style={[styles.filterChip, selectedFilter === filter.key && styles.filterChipActive]}
+            onPress={() => onFilterChange(filter.key)}
+          >
+            <Text style={[styles.filterChipText, selectedFilter === filter.key && styles.filterChipTextActive]}>
+              {filter.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {showLocationDropdown && (
+        <View style={styles.locationDropdown}>
+          {locations.map((loc) => (
+            <TouchableOpacity
+              key={loc.key}
+              style={[styles.locationDropdownItem, selectedLocation === loc.key && styles.locationDropdownItemActive]}
+              onPress={() => onLocationChange(loc.key)}
+            >
+              <Text style={[styles.locationDropdownText, selectedLocation === loc.key && styles.locationDropdownTextActive]}>
+                {loc.label}
+              </Text>
+              {selectedLocation === loc.key && (
+                <Ionicons name="checkmark" size={18} color={Variables.colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  filtersScroll: {
+    marginBottom: Variables.sizes.sm,
+  },
+  filtersContent: {
+    paddingHorizontal: Variables.sizes.md,
+    gap: Variables.sizes.sm,
+    alignItems: "center",
+  },
+  filterChip: {
+    paddingHorizontal: Variables.sizes.md,
+    paddingVertical: Variables.sizes.xs,
+    borderRadius: 20,
+    backgroundColor: Variables.colors.surface,
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+  },
+  filterChipActive: {
+    backgroundColor: Variables.colors.primary,
+    borderColor: Variables.colors.primary,
+  },
+  filterChipText: {
+    fontFamily: Variables.fonts.semibold,
+    fontSize: Variables.textSizes.sm,
+    color: Variables.colors.textLight,
+  },
+  filterChipTextActive: {
+    color: Variables.colors.textInverse,
+  },
+  locationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Variables.sizes.xs,
+  },
+  locationDropdown: {
+    marginHorizontal: Variables.sizes.md,
+    marginBottom: Variables.sizes.sm,
+    backgroundColor: Variables.colors.surface,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  locationDropdownItem: {
+    paddingHorizontal: Variables.sizes.md,
+    paddingVertical: Variables.sizes.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: Variables.colors.background,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  locationDropdownItemActive: {
+    backgroundColor: Variables.colors.primary + "15",
+  },
+  locationDropdownText: {
+    fontFamily: Variables.fonts.regular,
+    fontSize: Variables.textSizes.base,
+    color: Variables.colors.text,
+  },
+  locationDropdownTextActive: {
+    fontFamily: Variables.fonts.bold,
+    color: Variables.colors.primary,
+  },
+});
