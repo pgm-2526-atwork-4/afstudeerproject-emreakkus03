@@ -164,11 +164,23 @@ const handleSendReset = async () => {
 
        
         <View style={styles.footer}>
-            <Text style={styles.footerText}>
-                Door verder te gaan, accepteer je onze{"\n"}
-                <Text style={styles.legalLink}>Gebruiksvoorwaarden</Text> en <Text style={styles.legalLink}>Privacybeleid</Text>
-            </Text>
-        </View>
+    <Text style={styles.footerText}>
+        Door verder te gaan, accepteer je onze{"\n"}
+        <Text 
+            style={styles.legalLink} 
+            onPress={() => router.push("/terms" as any)}
+        >
+            Gebruiksvoorwaarden
+        </Text>
+        {" "}en{" "}
+        <Text 
+            style={styles.legalLink} 
+            onPress={() => router.push("/privacy-policy" as any)}
+        >
+            Privacybeleid
+        </Text>
+    </Text>
+</View>
 
 {showResetModal && (
     <View style={styles.resetModalOverlay}>

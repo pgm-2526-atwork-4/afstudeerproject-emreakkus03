@@ -26,8 +26,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adaptiveIcon: {
       backgroundColor:  "#F5F7FA",
        foregroundImage: "./assets/images/icon.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
-      monochromeImage: "./assets/images/android-icon-monochrome.png"
     },
     package: "dev.emre.CivicSnap",
     edgeToEdgeEnabled: true,
@@ -54,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-splash-screen",
       {
         "image": "./assets/images/icon.png",
-        "imageWidth": 200,
+        "imageWidth": 150,
         "resizeMode": "contain",
         "backgroundColor": "#F5F7FA",
         "dark": {

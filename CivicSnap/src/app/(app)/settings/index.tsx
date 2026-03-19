@@ -197,7 +197,7 @@ const CONFIRM_PHRASE = "VERWIJDEREN";
         {/* --- Other --- */}
         <Text style={styles.sectionTitle}>Overig</Text>
         <View style={styles.sectionCard}>
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push("/(app)/settings/support" as any)}>
             <Image
               source={require("@assets/icons/Help.png")}
               style={[styles.rowIcon]}
