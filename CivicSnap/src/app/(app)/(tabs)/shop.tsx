@@ -470,11 +470,11 @@ export default function ShopScreen() {
                       {reward.title}
                     </Text>
                     <View style={styles.rewardBusinessRow}>
-                      <Ionicons
-                        name="location-outline"
-                        size={12}
-                        color={Variables.colors.textLight}
-                      />
+                      <Image
+  source={require("@assets/icons/ReportPinMarker.png")}
+  style={{ width: 15, height: 18 }}
+  resizeMode="contain"
+/>
                       <Text style={styles.rewardBusiness} numberOfLines={1}>
                         {reward.business_name}
                       </Text>
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
   locationBadge: {
     position: "absolute",
     top: Variables.sizes.sm,
-    left: Variables.sizes.sm,
+    right: Variables.sizes.sm,
     backgroundColor: Variables.colors.primary,
     paddingHorizontal: Variables.sizes.sm,
     paddingVertical: 2,
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
   },
   locationBadgeText: {
     fontFamily: Variables.fonts.bold,
-    fontSize: 10,
+    fontSize: 12,
     color: Variables.colors.textInverse,
   },
   rewardImageWrapper: {
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
   },
   rewardTitle: {
     fontFamily: Variables.fonts.bold,
-    fontSize: Variables.textSizes.sm,
+    fontSize: Variables.textSizes.base,
     color: Variables.colors.text,
     marginBottom: 2,
   },
@@ -1020,9 +1020,9 @@ const styles = StyleSheet.create({
     marginBottom: Variables.sizes.xs,
   },
   rewardBusiness: {
-    fontFamily: Variables.fonts.regular,
-    fontSize: 11,
-    color: Variables.colors.textLight,
+    fontFamily: Variables.fonts.default,
+    fontSize: 13,
+    color: Variables.colors.text,
   },
   rewardCostRow: {
     flexDirection: "row",
@@ -1031,17 +1031,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   rewardDiamond: {
-    width: 14,
-    height: 14,
+    width: 15,
+    height: 18,
   },
   rewardCost: {
-    fontFamily: Variables.fonts.bold,
-    fontSize: Variables.textSizes.sm,
+    fontFamily: Variables.fonts.default,
+    fontSize: Variables.textSizes.base,
     color: Variables.colors.text,
   },
   rewardValidity: {
-    fontFamily: Variables.fonts.regular,
-    fontSize: 10,
+    fontFamily: Variables.fonts.bold,
+    fontSize: 11,
     color: Variables.colors.textLight,
   },
   claimButton: {
