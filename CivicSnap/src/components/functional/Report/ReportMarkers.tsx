@@ -9,39 +9,56 @@ import { API } from "@core/networking/api";
 import { useRealtime } from "@core/modules/realtimeProvider/RealtimeProvider";
 
 type ReportMarkerProps = {
-    location_lat: number;
-    location_long: number;
-    onReportPress?:(report: any) => void;
+  location_lat: number;
+  location_long: number;
+  onReportPress?: (report: any) => void;
 };
 
-export default function ReportMarkers({location_lat, location_long, onReportPress}: ReportMarkerProps) {
-    const [reports, setReports] = useState<any[]>([]);
-    const { lastUpdate } = useRealtime();
+export default function ReportMarkers({
+  location_lat,
+  location_long,
+  onReportPress,
+}: ReportMarkerProps) {
+  const [reports, setReports] = useState<any[]>([]);
+  const { lastUpdate } = useRealtime();
+  const [currentZipCode, setCurrentZipCode] = useState("");
 
-    useEffect(() => {
-        if (!location_lat || !location_long) return;
+  useEffect(() => {
+    if (!location_lat || !location_long) return;
 
-        const fetchLocalReports = async () => {
-            try {
-                const APIKey = API.config.googleMapsApiKey;
-                if (!APIKey) return;
+    const fetchZipCode = async () => {
+      try {
+        const APIKey = API.config.googleMapsApiKey;
+        if (!APIKey) return;
 
-                const geoResponse = await fetch (`https://maps.googleapis.com/maps/api/geocode/json?latlng=${location_lat},${location_long}&key=${APIKey}`);
-                const geoData = await geoResponse.json();
+        const geoResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location_lat},${location_long}&key=${APIKey}`,
+        );
+        const geoData = await geoResponse.json();
 
-                let currentZipCode = "";
-                if(geoData.results && geoData.results.length > 0) {
-                    const addressComponents = geoData.results[0].address_components;
-                    const zipComponent = addressComponents.find((component: any) => component.types.includes("postal_code"))
-                    if (zipComponent) currentZipCode = zipComponent.long_name;
-                }
+        if (geoData.results && geoData.results.length > 0) {
+          const zipComponent = geoData.results[0].address_components.find(
+            (c: any) => c.types.includes("postal_code"),
+          );
+          if (zipComponent) setCurrentZipCode(zipComponent.long_name);
+        }
+      } catch (error) {
+        console.error("Error fetching zipcode:", error);
+      }
+    };
 
-                if(!currentZipCode) return;
+    fetchZipCode();
+  }, []);
 
-                const orgsResponse = await API.database.listDocuments(
+  useEffect(() => {
+    if (!currentZipCode) return;
+
+    const fetchReportsByZip = async () => {
+      try {
+        const orgsResponse = await API.database.listDocuments(
           API.config.databaseId,
           API.config.organizationsCollectionId,
-          [Query.search("zip_codes", currentZipCode)]
+          [Query.search("zip_codes", currentZipCode)],
         );
 
         if (orgsResponse.documents.length === 0) return;
@@ -52,25 +69,25 @@ export default function ReportMarkers({location_lat, location_long, onReportPres
           API.config.reportsCollectionId,
           [
             Query.equal("organization_id", organizationId),
-            Query.equal("status", ["new", "approved", "in_progress"]), 
-            Query.equal("is_duplicate", false), 
-            Query.orderDesc("$createdAt"), 
-            Query.limit(50) 
-          ]
+            Query.equal("status", ["new", "approved", "in_progress"]),
+            Query.equal("is_duplicate", false),
+            Query.orderDesc("$createdAt"),
+            Query.limit(50),
+          ],
         );
 
         setReports(reportsResponse.documents);
-            } catch (error) {
-                console.error("Error fetching local reports:", error);
-            }
-        };
-        fetchLocalReports();
+      } catch (error) {
+        console.error("Error fetching reports:", error);
+      }
+    };
 
-    }, [location_lat, location_long, lastUpdate]);
+    fetchReportsByZip();
+  }, [currentZipCode, lastUpdate]);
 
-    if (reports.length === 0) return null;
+  if (reports.length === 0) return null;
 
-    return (
+  return (
     <>
       {reports.map((report) => (
         <Marker
@@ -81,16 +98,19 @@ export default function ReportMarkers({location_lat, location_long, onReportPres
           }}
           title={report.category_name || "Melding"}
           description={report.address || "Adres onbekend"}
-          onPress={(e) =>{e.stopPropagation(); onReportPress && onReportPress(report);} }
-         anchor={{ x: 0.5, y: 1 }}
+          onPress={(e) => {
+            e.stopPropagation();
+            onReportPress && onReportPress(report);
+          }}
+          anchor={{ x: 0.5, y: 1 }}
         >
           <Image
-    source={require("@assets/icons/ReportPinMarker.png")}
-    style={{ width: 40, height: 40 }}
-    resizeMode="contain"
-/>
+            source={require("@assets/icons/ReportPinMarker.png")}
+            style={{ width: 40, height: 40 }}
+            resizeMode="contain"
+          />
         </Marker>
       ))}
     </>
   );
-};
+}

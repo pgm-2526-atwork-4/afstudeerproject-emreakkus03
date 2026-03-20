@@ -1,12 +1,11 @@
 import { Modal, View, StyleSheet, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { Ionicons } from "@expo/vector-icons";
 
 // --- Theme styling ---
 import { Variables } from "@style/theme";
 import ThemedText from "@components/design/Typography/ThemedText";
-import BackButton from "@components/design/Button/BackButton";
+
 
 import { API } from "@/core/networking/api";
 
@@ -95,6 +94,9 @@ export default function LocationSearchModal({
               listView: styles.searchListView,
               row: styles.searchRow,
             }}
+            textInputProps={{
+  placeholderTextColor: Variables.colors.textLight,
+}}
           />
         </View>
       </View>
@@ -155,7 +157,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Variables.colors.textLight,
     fontFamily: Variables.fonts.regular,
-  },
+    color: Variables.colors.text,
+  } as any,
   searchListView: {
     backgroundColor: Variables.colors.textInverse,
     borderRadius: Variables.sizes.sm,
