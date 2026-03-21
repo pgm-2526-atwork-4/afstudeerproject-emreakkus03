@@ -10,7 +10,6 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ID } from "react-native-appwrite";
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 import { API } from "@/core/networking/api";
 import { useAuthContext } from "@components/functional/Auth/authProvider";
@@ -20,6 +19,7 @@ import { Variables } from "@/style/theme";
 import Button from "@components/design/Button/PrimaryButton";
 import EditButton from "@components/design/Button/EditButton";
 import ThemedText from "@components/design/Typography/ThemedText";
+import XPPopup from "@components/design/XPPopup/XPPopup";
 
 //---- custom functional components ----//
 import LocationSearchModal from "@components/functional/Report/LocationSearchModal";
@@ -49,7 +49,7 @@ export default function CreateReportForm({
   hasPhoto,
 }: Props) {
   const router = useRouter();
-  const { user } = useAuthContext();
+  const { user, profile } = useAuthContext();
 
   const [description, setDescription] = useState("");
   const [categories, setCategories] = useState<
@@ -70,7 +70,7 @@ export default function CreateReportForm({
   const [isPhotoReport] = useState(!!photoUri);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
- const [aiDetectedLabel, setAiDetectedLabel] = useState<string | null>(null);
+  const [aiDetectedLabel, setAiDetectedLabel] = useState<string | null>(null);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
   const [hasAnalyzedInitial, setHasAnalyzedInitial] = useState(false);
 
@@ -83,6 +83,10 @@ export default function CreateReportForm({
 
   // send the google cloud vision api labels to the reports database
   const [visionLabels, setVisionLabels] = useState<string[]>([]);
+
+  const [showXPPopup, setShowXPPopup] = useState(false);
+  const [xpGained, setXpGained] = useState(0);
+  const [newTotalXp, setNewTotalXp] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -107,7 +111,7 @@ export default function CreateReportForm({
     fetchCategories();
   }, []);
 
- useEffect(() => {
+  useEffect(() => {
     const analyzeInitialPhoto = async () => {
       if (photoUri && categories.length > 0 && !hasAnalyzedInitial) {
         setHasAnalyzedInitial(true);
@@ -134,20 +138,24 @@ export default function CreateReportForm({
       for (const category of availableCategories) {
         if (category.keywords && category.keywords.length > 0) {
           const isMatch = category.keywords.some((keyword: string) => {
-            const words = keyword.split(',').map(w => w.trim().toLowerCase());
-            return words.some(word => word !== "" && (label.includes(word) || word.includes(label)));
-        });
-          
+            const words = keyword.split(",").map((w) => w.trim().toLowerCase());
+            return words.some(
+              (word) =>
+                word !== "" && (label.includes(word) || word.includes(label)),
+            );
+          });
+
           if (isMatch) return { category: category, confidence: score };
         }
+      }
     }
-  }
 
-  const fallback = availableCategories.find(cat => cat.name.toLowerCase().includes("ander"));
-    
+    const fallback = availableCategories.find((cat) =>
+      cat.name.toLowerCase().includes("ander"),
+    );
+
     return { category: fallback || null, confidence: 1 };
-};
-   
+  };
 
   const analyzeImageWithAI = async (base64String: string) => {
     setIsAnalyzing(true);
@@ -177,16 +185,23 @@ export default function CreateReportForm({
       if (data.responses && data.responses[0].labelAnnotations) {
         const annotations = data.responses[0].labelAnnotations;
 
-        const rawLabels = annotations.map((annotation: any) => annotation.description.toLowerCase());
+        const rawLabels = annotations.map((annotation: any) =>
+          annotation.description.toLowerCase(),
+        );
         setVisionLabels(rawLabels);
 
         let currentCats = categories;
         if (currentCats.length === 0) {
-            const res = await API.database.listDocuments(API.config.databaseId, API.config.categoriesCollectionId);
-            currentCats = res.documents.map((doc: any) => ({
-                id: doc.$id, name: doc.name, keywords: doc.keywords || []
-            }));
-            setCategories(currentCats);
+          const res = await API.database.listDocuments(
+            API.config.databaseId,
+            API.config.categoriesCollectionId,
+          );
+          currentCats = res.documents.map((doc: any) => ({
+            id: doc.$id,
+            name: doc.name,
+            keywords: doc.keywords || [],
+          }));
+          setCategories(currentCats);
         }
 
         const matchResult = mapVisionDataToCategory(annotations, currentCats);
@@ -269,7 +284,7 @@ export default function CreateReportForm({
       Alert.alert("Oeps!", "Vul een korte beschrijving van het probleem in.");
       return;
     }
-   if (!user) {
+    if (!user) {
       Alert.alert("Fout", "Je moet ingelogd zijn om een melding te maken.");
       return;
     }
@@ -315,34 +330,35 @@ export default function CreateReportForm({
       }
 
       let matchedOrgId = null;
-      try{
+      try {
         const orgsResponse = await API.database.listDocuments(
           API.config.databaseId,
           API.config.organizationsCollectionId,
         );
 
-        const findOrg = orgsResponse.documents.find((org: any) => 
-          org.zip_codes && org.zip_codes.includes(currentZipcode)
+        const findOrg = orgsResponse.documents.find(
+          (org: any) => org.zip_codes && org.zip_codes.includes(currentZipcode),
         );
 
-        if(findOrg) {
+        if (findOrg) {
           matchedOrgId = findOrg.$id;
-
         } else {
           Alert.alert(
             "Dit gemeente wordt nog niet ondersteund",
-            `Helaas werkt ${currentCity || "deze gemeente"} nog niet samen met CivicSnap. Je kunt hier nog geen melding maken.`
+            `Helaas werkt ${currentCity || "deze gemeente"} nog niet samen met CivicSnap. Je kunt hier nog geen melding maken.`,
           );
           setLoading(false);
           return;
         }
-      } catch(orgError) {
+      } catch (orgError) {
         console.error("Error fetching organizations:", orgError);
-        Alert.alert("Fout", "Kon de gemeente-gegevens niet ophalen. Probeer het later opnieuw.");
+        Alert.alert(
+          "Fout",
+          "Kon de gemeente-gegevens niet ophalen. Probeer het later opnieuw.",
+        );
         setLoading(false);
         return;
       }
-      
 
       await API.database.createDocument(
         API.config.databaseId,
@@ -360,18 +376,31 @@ export default function CreateReportForm({
           status: "new",
           is_duplicate: false,
           points_awarded: 0,
-          ai_detected_category: aiDetectedLabel ? aiDetectedLabel.substring(0, 50) : null,
+          ai_detected_category: aiDetectedLabel
+            ? aiDetectedLabel.substring(0, 50)
+            : null,
           ai_confidence: aiConfidence > 0 ? aiConfidence : null,
           organization_id: matchedOrgId,
           vision_labels: visionLabels.length > 0 ? visionLabels : [],
           ...(uploadedPhotoUri ? { photo_url: uploadedPhotoUri } : {}),
         },
       );
-      Alert.alert(
-        "Melding succesvol aangemaakt!",
-        "Bedankt voor je bijdrage aan een betere leefomgeving.",
-      );
-      router.push("/(app)/(tabs)/home");
+
+      try {
+        const freshProfile = await API.database.getDocument(
+          API.config.databaseId,
+          API.config.profilesCollectionId,
+          user.id,
+        );
+        const gained =
+          freshProfile.lifetime_points - (profile?.lifetime_points || 0);
+        setXpGained(gained > 0 ? gained : 100);
+        setNewTotalXp(freshProfile.lifetime_points || 0);
+      } catch {
+        setXpGained(100);
+        setNewTotalXp(100);
+      }
+      setShowXPPopup(true);
     } catch (error) {
       console.error("Error creating report:", error);
       Alert.alert(
@@ -383,8 +412,13 @@ export default function CreateReportForm({
     }
   };
 
- return (
-    <View  style={styles.formCard}>
+  const handleXPPopupClose = () => {
+    setShowXPPopup(false);
+    router.push("/(app)/(tabs)/home");
+  };
+
+  return (
+    <View style={styles.formCard}>
       {(hasPhoto || localPhotoUri) &&
         (localPhotoUri ? (
           <View style={styles.photoPreviewContainer}>
@@ -398,24 +432,41 @@ export default function CreateReportForm({
 
             {isAnalyzing && (
               <View style={styles.aiBadgeAnalyzing}>
-                  <ActivityIndicator size="small" color="white" style={styles.aiBadgeIcon} />
-                  <ThemedText style={styles.aiBadgeText}>AI analyseert...</ThemedText>
+                <ActivityIndicator
+                  size="small"
+                  color="white"
+                  style={styles.aiBadgeIcon}
+                />
+                <ThemedText style={styles.aiBadgeText}>
+                  AI analyseert...
+                </ThemedText>
               </View>
             )}
-            
+
             {!isAnalyzing && aiDetectedLabel !== null && (
-  <View style={styles.aiBadgeCenterWrapper}>
-    <View style={styles.aiBadgeSuccess}>
-      <Ionicons name="sparkles" size={14} color="white" style={styles.aiBadgeIcon} />
-      <ThemedText style={styles.aiBadgeText}>
-        AI: {aiDetectedLabel} {aiConfidence ? `(${aiConfidence}%)` : ''} herkend
-      </ThemedText>
-    </View>
-  </View>
-)}
+              <View style={styles.aiBadgeCenterWrapper}>
+                <View style={styles.aiBadgeSuccess}>
+                  <Ionicons
+                    name="sparkles"
+                    size={14}
+                    color="white"
+                    style={styles.aiBadgeIcon}
+                  />
+                  <ThemedText style={styles.aiBadgeText}>
+                    AI: {aiDetectedLabel}{" "}
+                    {aiConfidence ? `(${aiConfidence}%)` : ""} herkend
+                  </ThemedText>
+                </View>
+              </View>
+            )}
             <TouchableOpacity
               style={styles.deleteButtonTouchable}
-              onPress={() => {setLocalPhotoUri(null); setAiDetectedLabel(null); setAiConfidence(0); setVisionLabels([]); }}
+              onPress={() => {
+                setLocalPhotoUri(null);
+                setAiDetectedLabel(null);
+                setAiConfidence(0);
+                setVisionLabels([]);
+              }}
             >
               <Image
                 style={styles.deleteButtonImage}
@@ -433,27 +484,15 @@ export default function CreateReportForm({
                 style={styles.photoActionButton}
                 onPress={() => pickImage(true)}
               >
-                <Ionicons
-                  name="camera"
-                  size={22}
-                  style={styles.icon}
-                />
-                <ThemedText style={styles.iconLabel}>
-                  Camera
-                </ThemedText>
+                <Ionicons name="camera" size={22} style={styles.icon} />
+                <ThemedText style={styles.iconLabel}>Camera</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.photoActionButton}
                 onPress={() => pickImage(false)}
               >
-                <Ionicons
-                  name="image"
-                  size={22}
-                  style={styles.icon}
-                />
-                <ThemedText style={styles.iconLabel}>
-                  Galerij
-                </ThemedText>
+                <Ionicons name="image" size={22} style={styles.icon} />
+                <ThemedText style={styles.iconLabel}>Galerij</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -538,6 +577,14 @@ export default function CreateReportForm({
           setCurrentZipcode(data.zipcode);
         }}
       />
+
+      <XPPopup
+        visible={showXPPopup}
+        xpGained={xpGained}
+        totalXp={newTotalXp}
+        avatarUrl={profile?.avatar_url}
+        onClose={handleXPPopupClose}
+      />
     </View>
   );
 }
@@ -569,14 +616,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
- aiBadgeCenterWrapper: {
+  aiBadgeCenterWrapper: {
     position: "absolute",
     bottom: 15,
     left: 0,
     right: 0,
     alignItems: "center",
-},
-aiBadgeSuccess: {
+  },
+  aiBadgeSuccess: {
     backgroundColor: Variables.colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -588,7 +635,7 @@ aiBadgeSuccess: {
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
-},
+  },
   aiBadgeText: {
     color: Variables.colors.textInverse,
     fontSize: Variables.textSizes.sm - 2,

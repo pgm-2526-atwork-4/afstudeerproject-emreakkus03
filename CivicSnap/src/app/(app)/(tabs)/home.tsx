@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const { lastUpdate } = useRealtime();
 
   const [points, setPoints] = useState(profile?.current_points || 0);
-  const [currentLevel, setCurrentLevel] = useState(profile?.lifetime_points || 1);
+  const [lifetimeXp, setLifetimeXp] = useState(profile?.lifetime_points || 0);
 
   // Na de bestaande states:
 const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url);
@@ -30,7 +30,7 @@ const [displayName, setDisplayName] = useState(profile?.full_name?.split(" ")[0]
   useEffect(() => {
     if (profile) {
       setPoints(profile.current_points || 0);
-      setCurrentLevel(profile.lifetime_points || 1);
+      setLifetimeXp(profile.lifetime_points || 0);
     }
   }, [profile]);
 
@@ -45,7 +45,7 @@ const [displayName, setDisplayName] = useState(profile?.full_name?.split(" ")[0]
           profile.$id
         );
         setPoints(data.current_points || 0);
-        setCurrentLevel(data.lifetime_points || 1);
+        setLifetimeXp(data.lifetime_points || 0);
         setAvatarUrl(data.avatar_url);
         setDisplayName(data.full_name?.split(" ")[0] || "User");
       } catch (error) {
@@ -55,6 +55,19 @@ const [displayName, setDisplayName] = useState(profile?.full_name?.split(" ")[0]
 
     fetchLatestProfile();
   }, [lastUpdate, profile?.$id]);
+
+  const calculateLevel = (totalXp: number) => {
+    let tempLevel = 1;
+    let xpForNextTier = 1000;
+    let remainingXp = totalXp;
+    while (remainingXp >= xpForNextTier) {
+        remainingXp -= xpForNextTier;
+        tempLevel++;
+        xpForNextTier += 500;
+    }
+    return tempLevel;
+};
+const calculatedLevel = calculateLevel(lifetimeXp);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -74,7 +87,7 @@ const [displayName, setDisplayName] = useState(profile?.full_name?.split(" ")[0]
                 Hi, {displayName}
               </ThemedText>
 
-              <Text style={styles.levelText}>Level {currentLevel}</Text>
+              <Text style={styles.levelText}>Level {calculatedLevel}</Text>
             </View>
           </View>
 

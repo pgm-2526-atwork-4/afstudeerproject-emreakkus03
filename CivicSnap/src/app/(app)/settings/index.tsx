@@ -185,12 +185,18 @@ const CONFIRM_PHRASE = "VERWIJDEREN";
               style={[styles.rowIcon]}
             />
             <Text style={styles.rowLabel}>Dark mode</Text>
-            <Switch
-              value={darkMode}
-              onValueChange={(val) => setDarkMode(val)}
-              trackColor={{ false: "#E0E0E0", true: Variables.colors.primary }}
-              thumbColor="#fff"
-            />
+           <Switch
+    value={darkMode}
+    onValueChange={(val) => {
+        setDarkMode(val);
+        if (val) {
+            Alert.alert("Binnenkort beschikbaar", "Dark mode komt binnenkort!");
+            setDarkMode(false);
+        }
+    }}
+    trackColor={{ false: "#E0E0E0", true: Variables.colors.primary }}
+    thumbColor="#fff"
+/>
           </View>
         </View>
 
