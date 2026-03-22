@@ -154,6 +154,39 @@ try {
         return res.empty();
     }
 
+    // --- 2B. REPORT UPDATE EVENT ---
+if (event.includes('reports') && event.includes('update')) {
+    const updatedUserId = payload.user_id;
+    const newStatus = payload.status;
+    const pointsAwarded = payload.points_awarded || 0;
+
+    const positiveStatuses = ['approved', 'in_progress', 'resolved'];
+    if (!positiveStatuses.includes(newStatus)) {
+        return res.json({ success: true });
+    }
+
+    try {
+        const userProfile = await databases.getDocument(
+            process.env.DATABASE_ID,
+            process.env.PROFILES_COLLECTION_ID,
+            updatedUserId
+        );
+
+        if (userProfile.push_token) {
+            let body = "";
+            if (newStatus === 'approved') body = `Je melding is goedgekeurd! Je ontving ${pointsAwarded} diamonds. 💎`;
+            else if (newStatus === 'in_progress') body = `Je melding wordt behandeld! Je ontving ${pointsAwarded} diamonds. 💎`;
+            else if (newStatus === 'resolved') body = `Je melding is opgelost! Je ontving ${pointsAwarded} diamonds. 💎`;
+
+            await sendPushNotification(userProfile.push_token, "Update over je melding! 🔔", body);
+        }
+    } catch (err) {
+        error(`Error sending status update notification: ${err.message}`);
+    }
+
+    return res.json({ success: true });
+}
+
     // --- 3. ORIGINAL REPORT PERMISSIONS LOGIC ---
     const documentId = payload.$id;
     const orgId = payload.organization_id;

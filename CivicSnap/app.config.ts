@@ -29,6 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: "dev.emre.CivicSnap",
     edgeToEdgeEnabled: true,
+    googleServicesFile: "./google-services.json",
     predictiveBackGestureEnabled: false,
     permissions: [
       "ACCESS_COARSE_LOCATION",
@@ -38,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       googleMaps: {
         apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       }
-    }
+    },
   },
   
   web: {

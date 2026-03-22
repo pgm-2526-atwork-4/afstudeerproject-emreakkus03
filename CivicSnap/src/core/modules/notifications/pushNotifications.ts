@@ -1,14 +1,22 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
+
 import { API } from "@core/networking/api";
 
 export async function registerForPushNotifications(userId: string) {
     if (!Device.isDevice) return;
 
+     if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+            name: "default",
+            importance: Notifications.AndroidImportance.MAX,
+        });
+    }
+
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-
     if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
@@ -17,11 +25,10 @@ export async function registerForPushNotifications(userId: string) {
     if (finalStatus !== "granted") return;
 
     const token = (await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
+        projectId: Constants.expoConfig?.extra?.eas?.projectId,
     })).data;
-
-    // Sla token op in Appwrite
-    try {
+    
+     try {
         await API.database.updateDocument(
             API.config.databaseId,
             API.config.profilesCollectionId,
@@ -30,13 +37,6 @@ export async function registerForPushNotifications(userId: string) {
         );
     } catch (e) {
         console.error("Error saving push token:", e);
-    }
-
-    if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("default", {
-            name: "default",
-            importance: Notifications.AndroidImportance.MAX,
-        });
     }
 
     return token;

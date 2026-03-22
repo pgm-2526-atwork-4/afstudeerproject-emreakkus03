@@ -124,28 +124,32 @@ export default function ReportDetailScreen() {
             </View>
 
             <View style={styles.contentPadding}>
-                {/* 2) Report image + AI badge */}
-                <View style={styles.imageContainer}>
-                    <Image
-                        source={
-                            report.photo_url
-                                ? { uri: report.photo_url }
-                                : require("@assets/images/icon.png")
-                        }
-                        style={styles.mainImage}
+               <View style={styles.imageContainer}>
+    {report.photo_url ? (
+        <>
+            <Image
+                source={{ uri: report.photo_url }}
+                style={styles.mainImage}
+            />
+            <View style={styles.aiBadgeCenterWrapper}>
+                <View style={styles.aiBadgeSuccess}>
+                    <Ionicons
+                        name="sparkles"
+                        size={14}
+                        color="white"
+                        style={styles.aiBadgeIcon}
                     />
-                    <View style={styles.aiBadgeCenterWrapper}>
-                        <View style={styles.aiBadgeSuccess}>
-                            <Ionicons
-                                name="sparkles"
-                                size={14}
-                                color="white"
-                                style={styles.aiBadgeIcon}
-                            />
-                            <Text style={styles.aiBadgeText}>AI: {report.category_name} herkend</Text>
-                        </View>
-                    </View>
+                    <Text style={styles.aiBadgeText}>AI: {report.category_name} herkend</Text>
                 </View>
+            </View>
+        </>
+    ) : (
+        <View style={styles.noPhotoPlaceholder}>
+            <Ionicons name="image-outline" size={40} color="#9CA3AF" />
+            <Text style={styles.noPhotoText}>Geen foto toegevoegd</Text>
+        </View>
+    )}
+</View>
 
                 {/* 3) Metadata and description */}
                 <Text style={styles.infoText}>
@@ -449,4 +453,15 @@ const styles = StyleSheet.create({
     aiBadgeIcon: {
         marginRight: 6, // Spacing between icon and text
     },
+    noPhotoPlaceholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+},
+noPhotoText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#9CA3AF",
+},
 });
