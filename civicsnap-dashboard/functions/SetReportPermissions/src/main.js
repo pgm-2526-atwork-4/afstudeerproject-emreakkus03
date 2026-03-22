@@ -20,20 +20,22 @@ async function sendPushNotification(token, title, body) {
 }
 
 export default async ({ req, res, log, error }) => {
-
-const event = req.headers['x-appwrite-event'] || '';
-let payload = {};
-try {
-    if (req.body) {
-        payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-        if (payload.data) {
-            payload = typeof payload.data === 'string' ? JSON.parse(payload.data) : payload.data;
+    const event = req.headers['x-appwrite-event'] || '';
+    let payload = {};
+    try {
+        if (req.body) {
+            payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            if (payload.data) {
+                payload = typeof payload.data === 'string' ? JSON.parse(payload.data) : payload.data;
+            }
         }
+    } catch (e) {
+        error(`Failed to parse request body: ${e.message}`);
+        return res.json({ success: false, error: 'Invalid request body' });
     }
-} catch (e) {
-    error(`Failed to parse request body: ${e.message}`);
-    return res.json({ success: false, error: 'Invalid request body' });
-}
+
+    log(`Event: ${event}`);
+log(`Payload: ${JSON.stringify(payload)}`);
 
     const client = new Client()
         .setEndpoint(process.env.APPWRITE_ENDPOINT)
@@ -117,21 +119,21 @@ try {
 
             // Create user_rewards document
             await databases.createDocument(
-    process.env.DATABASE_ID,
-    process.env.USER_REWARDS_COLLECTION_ID,
-    ID.unique(),
-    {
-        user_id: userId,
-        reward_id: rewardId,
-        code: code,
-        status: 'active',
-        redeemed_at: null,
-    },
-    [
-        Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
-    ]
-);
+                process.env.DATABASE_ID,
+                process.env.USER_REWARDS_COLLECTION_ID,
+                ID.unique(),
+                {
+                    user_id: userId,
+                    reward_id: rewardId,
+                    code: code,
+                    status: 'active',
+                    redeemed_at: null,
+                },
+                [
+                    Permission.read(Role.user(userId)),
+                    Permission.update(Role.user(userId)),
+                ]
+            );
 
             log(`Reward ${rewardId} purchased by user ${userId} for ${reward.cost_points} diamonds`);
             return res.json({ success: true, code: code, pointsLeft: profile.current_points - reward.cost_points });
@@ -155,37 +157,37 @@ try {
     }
 
     // --- 2B. REPORT UPDATE EVENT ---
-if (event.includes('reports') && event.includes('update')) {
-    const updatedUserId = payload.user_id;
-    const newStatus = payload.status;
-    const pointsAwarded = payload.points_awarded || 0;
+    if (event.includes('reports') && event.includes('update')) {
+        const updatedUserId = payload.user_id;
+        const newStatus = payload.status;
+        const pointsAwarded = payload.points_awarded || 0;
 
-    const positiveStatuses = ['approved', 'in_progress', 'resolved'];
-    if (!positiveStatuses.includes(newStatus)) {
+        const positiveStatuses = ['approved', 'in_progress', 'resolved'];
+        if (!positiveStatuses.includes(newStatus)) {
+            return res.json({ success: true });
+        }
+
+        try {
+            const userProfile = await databases.getDocument(
+                process.env.DATABASE_ID,
+                process.env.PROFILES_COLLECTION_ID,
+                updatedUserId
+            );
+
+            if (userProfile.push_token) {
+                let body = "";
+                if (newStatus === 'approved') body = `Je melding is goedgekeurd! Je ontving ${pointsAwarded} diamonds. 💎`;
+                else if (newStatus === 'in_progress') body = `Je melding wordt behandeld! Je ontving ${pointsAwarded} diamonds. 💎`;
+                else if (newStatus === 'resolved') body = `Je melding is opgelost! Je ontving ${pointsAwarded} diamonds. 💎`;
+
+                await sendPushNotification(userProfile.push_token, "Update over je melding! 🔔", body);
+            }
+        } catch (err) {
+            error(`Error sending status update notification: ${err.message}`);
+        }
+
         return res.json({ success: true });
     }
-
-    try {
-        const userProfile = await databases.getDocument(
-            process.env.DATABASE_ID,
-            process.env.PROFILES_COLLECTION_ID,
-            updatedUserId
-        );
-
-        if (userProfile.push_token) {
-            let body = "";
-            if (newStatus === 'approved') body = `Je melding is goedgekeurd! Je ontving ${pointsAwarded} diamonds. 💎`;
-            else if (newStatus === 'in_progress') body = `Je melding wordt behandeld! Je ontving ${pointsAwarded} diamonds. 💎`;
-            else if (newStatus === 'resolved') body = `Je melding is opgelost! Je ontving ${pointsAwarded} diamonds. 💎`;
-
-            await sendPushNotification(userProfile.push_token, "Update over je melding! 🔔", body);
-        }
-    } catch (err) {
-        error(`Error sending status update notification: ${err.message}`);
-    }
-
-    return res.json({ success: true });
-}
 
     // --- 3. ORIGINAL REPORT PERMISSIONS LOGIC ---
     const documentId = payload.$id;
@@ -222,21 +224,21 @@ if (event.includes('reports') && event.includes('update')) {
         log(`Permissions successfully set for report: ${documentId}`);
 
         try {
-    const userProfile = await databases.getDocument(
-        process.env.DATABASE_ID,
-        process.env.PROFILES_COLLECTION_ID,
-        userId
-    );
-    if (userProfile.push_token) {
-        await sendPushNotification(
-            userProfile.push_token,
-            "Melding ontvangen! 📍",
-            "Je melding is succesvol ingediend. We gaan ermee aan de slag!"
-        );
-    }
-} catch (e) {
-    error(`Error sending push notification: ${e.message}`);
-}
+            const userProfile = await databases.getDocument(
+                process.env.DATABASE_ID,
+                process.env.PROFILES_COLLECTION_ID,
+                userId
+            );
+            if (userProfile.push_token) {
+                await sendPushNotification(
+                    userProfile.push_token,
+                    "Melding ontvangen! 📍",
+                    "Je melding is succesvol ingediend. We gaan ermee aan de slag!"
+                );
+            }
+        } catch (e) {
+            error(`Error sending push notification: ${e.message}`);
+        }
         return res.json({ success: true });
 
     } catch (err) {
