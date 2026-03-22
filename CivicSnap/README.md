@@ -1,50 +1,35 @@
-# Welcome to your Expo app 👋
+# CivicSnap - Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+CivicSnap is an innovative platform that empowers citizens to actively contribute to the improvement of their living environment. Through this mobile application, users can easily report issues in public spaces and earn rewards for their engagement through a gamification system.
 
-## Get started
+## 📦 Installation
 
-1. Install dependencies
+1. Navigate to the folder: `cd CivicSnap`
+2. Install the required packages: `npm install`
+3. Start the Expo server: `npx expo start`
 
-   ```bash
-   npm install
-   ```
+## 🚀 Features
 
-2. Start the app
+- **Smart Reporting:** Take photos of issues (such as litter, broken street lighting, or potholes). The app supports AI recognition to automatically categorize the type of report.
+- **Interactive Map:** View nearby reports and track the status of your own reports in real-time.
+- **Gamification & Rewards:**
+  - Earn XP (Experience Points) and increase your Level.
+  - Daily Spin: Spin the wheel daily for extra points or bonuses. *(Note: This feature is currently under development).*
+- **In-App Shop:** Exchange your earned points for vouchers and rewards from CivicSnap partners.
+- **Personal Profile:**
+  - View your own submitted reports.
+  - Track your current Level and XP status.
+  - See your collected diamonds.
+  - Edit your profile information.
 
-   ```bash
-   npx expo start
-   ```
+## 🛠 Tech Stack
 
-In the output, you'll find options to open the app in a
+- **Framework:** React Native with Expo
+- **Backend:** Appwrite (Authentication, Database, Storage)
+- **Language:** TypeScript
+- **Styling:** Custom design system. *(Dark Mode support is planned for a future update).*
+- **Push Notifications:** Expo Notifications for real-time report updates.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 👤 Author
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Emre Akkus

@@ -1,46 +1,35 @@
-# Getting Started with Create React App
+# CivicSnap - Dashboard Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The CivicSnap Dashboard is the central control hub for municipalities and administrators. The platform provides the necessary tools to efficiently handle citizen reports and manage app content.
 
-## Available Scripts
+## 📦 Installation
 
-In the project directory, you can run:
+1. Navigate to the folder: `cd civicsnap-dashboard`
+2. Install the dependencies: `npm install`
+3. Start the development environment: `npm start`
 
-### `npm start`
+## 🏛️ Functionalities
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### City Dashboard (For Officials)
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- **Report Management:** View incoming reports on a map or in a list. Change the status (e.g., "In Progress" or "Resolved") and communicate directly with the citizen.
+- **Announcements:** Send important updates or news items directly to the mobile app of citizens in your region.
 
-### `npm test`
+### Super Admin Dashboard
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **System Management:** Full overview of all connected municipalities and users.
+- **Rewards Management:** Manage the products and vouchers available in the mobile app's in-app shop.
+- **Moderation:** Access to the Shadowban feature to prevent platform abuse. *(Note: This feature is currently under development).*
 
-### `npm run build`
+## 🛠 Tech Stack
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **Framework:** React.js
+- **Language:** TypeScript (TSX)
+- **Styling:** Tailwind CSS
+- **Backend Integration:** Appwrite SDK
+- **Internationalization:** i18next (focus on nl-BE)
+- **Icons:** Lucide React
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 👤 Author
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+Emre Akkus
